@@ -111,8 +111,9 @@ public class DayModel : PageModel
         Day.StartTime = Input.StartTime;
         Day.EndTime = Input.EndTime;
 
+        var isTimeOnly = Employee.Department?.IsTimeOnly == true;
         var settings = await _settings.GetValidationSettingsAsync();
-        var entries = Input.EffectiveEntries();
+        var entries = isTimeOnly ? new List<EntryInput>() : Input.EffectiveEntries();
         var validation = TimeCalculationService.Validate(Input.StartTime, Input.EndTime,
             entries.Select(e => new TimeEntry
             {
@@ -120,7 +121,7 @@ public class DayModel : PageModel
                 Hours = e.Hours ?? 0,
                 WorkDescription = e.WorkDescription ?? string.Empty,
                 IsInhouse = e.IsInhouse,
-            }).ToList(), settings, strict: true);
+            }).ToList(), settings, strict: !isTimeOnly);
 
         if (validation.HasErrors)
         {
@@ -170,7 +171,7 @@ public class DayModel : PageModel
         if (Day is null)
         {
             var shift = await _settings.GetShiftTemplateAsync();
-            Day = new WorkDay { EmployeeId = employeeId, Date = date, StartTime = shift?.Start ?? new TimeOnly(8, 0), EndTime = shift?.End ?? new TimeOnly(16, 30) };
+            Day = new WorkDay { EmployeeId = employeeId, Date = date, StartTime = shift?.Start ?? ShiftDefaults.Start, EndTime = shift?.End ?? ShiftDefaults.End };
         }
 
         Input = new DayFormModel

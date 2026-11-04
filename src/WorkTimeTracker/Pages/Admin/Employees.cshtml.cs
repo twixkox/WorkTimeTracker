@@ -24,7 +24,7 @@ public class EmployeesModel : PageModel
     public List<Models.Employee> Employees { get; private set; } = new();
     public SelectList Departments { get; private set; } = default!;
 
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public int? EditId { get; set; }
     [BindProperty]
     public string FullName { get; set; } = string.Empty;
@@ -36,7 +36,8 @@ public class EmployeesModel : PageModel
     public async Task OnGet()
     {
         Employees = await _db.Employees.Include(e => e.Department).OrderBy(e => e.Department!.Name).ThenBy(e => e.FullName).ToListAsync();
-        Departments = new SelectList(await _db.Departments.Where(d => d.IsActive).OrderBy(d => d.Name).ToListAsync(), "Id", "Name");
+        var selectedDepartment = Employees.FirstOrDefault(e => e.Id == EditId)?.DepartmentId;
+        Departments = new SelectList(await _db.Departments.Where(d => d.IsActive).OrderBy(d => d.Name).ToListAsync(), "Id", "Name", selectedDepartment);
     }
 
     public async Task<IActionResult> OnPostSaveAsync()

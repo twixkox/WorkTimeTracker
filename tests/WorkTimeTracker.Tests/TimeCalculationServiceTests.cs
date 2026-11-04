@@ -10,9 +10,10 @@ public class TimeCalculationServiceTests
         => new() { Hours = hours, BoatId = inhouse ? null : boatId, IsInhouse = inhouse, WorkDescription = work };
 
     [Fact]
-    public void WorkedHours_EndMinusStart()
+    public void WorkedHours_SubtractsLunchHour()
     {
-        Assert.Equal(8.5m, TimeCalculationService.WorkedHours(new TimeOnly(8, 0), new TimeOnly(16, 30)));
+        Assert.Equal(7.5m, TimeCalculationService.WorkedHours(new TimeOnly(8, 0), new TimeOnly(16, 30)));
+        Assert.Equal(0m, TimeCalculationService.WorkedHours(new TimeOnly(8, 0), new TimeOnly(8, 30)));
         Assert.Equal(0m, TimeCalculationService.WorkedHours(new TimeOnly(16, 30), new TimeOnly(8, 0)));
     }
 
@@ -26,7 +27,7 @@ public class TimeCalculationServiceTests
     [Fact]
     public void OvertimeHours_PositiveOnlyAboveThreshold()
     {
-        Assert.Equal(1.5m, TimeCalculationService.OvertimeHours(new TimeOnly(8, 0), new TimeOnly(17, 30), 8m));
+        Assert.Equal(0.5m, TimeCalculationService.OvertimeHours(new TimeOnly(8, 0), new TimeOnly(17, 30), 8m));
         Assert.Equal(0m, TimeCalculationService.OvertimeHours(new TimeOnly(8, 0), new TimeOnly(15, 0), 8m));
     }
 
@@ -66,11 +67,20 @@ public class TimeCalculationServiceTests
     }
 
     [Fact]
-    public void Validate_InhouseDoesNotNeedBoat()
+    public void Validate_InhouseDoesNotNeedBoatOrDescription()
     {
-        var entries = new List<TimeEntry> { Entry(8m, inhouse: true) };
+        var entries = new List<TimeEntry> { Entry(7m, inhouse: true, work: "") };
         var result = TimeCalculationService.Validate(new TimeOnly(8, 0), new TimeOnly(16, 0), entries, ValidationSettings.Defaults, strict: true);
         Assert.False(result.HasErrors);
+        Assert.DoesNotContain(result.Issues, i => i.Code == "work-empty");
+    }
+
+    [Fact]
+    public void Validate_BoatWorkRequiresDescriptionOnSubmit()
+    {
+        var entries = new List<TimeEntry> { Entry(4m, work: "") };
+        var result = TimeCalculationService.Validate(new TimeOnly(8, 0), new TimeOnly(16, 0), entries, ValidationSettings.Defaults, strict: true);
+        Assert.Contains(result.Issues, i => i.Code == "work-empty" && i.Severity == ValidationSeverity.Error);
     }
 
     [Fact]

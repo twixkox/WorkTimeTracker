@@ -1,0 +1,35 @@
+@page
+@model WorkTimeTracker.Pages.Notifications.IndexModel
+@{
+    ViewData["Title"] = "Уведомления";
+}
+
+<div class="page-heading">
+    <div>
+        <div class="page-eyebrow">Личный кабинет</div>
+        <h4 class="mb-0">Уведомления</h4>
+    </div>
+</div>
+
+<div class="card">
+    @if (Model.Items.Count == 0)
+    {
+        <div class="empty-state"><i class="bi bi-bell-slash"></i><div>Уведомлений пока нет</div></div>
+    }
+    else
+    {
+        <div class="list-group list-group-flush">
+            @foreach (var notification in Model.Items)
+            {
+                <a class="list-group-item list-group-item-action @(notification.IsRead ? "" : "list-group-item-primary")"
+                   href="@(notification.Link ?? "#")">
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <strong>@notification.Title</strong>
+                        <small class="text-muted">@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                    </div>
+                    <div>@notification.Message</div>
+                </a>
+            }
+        </div>
+    }
+</div>

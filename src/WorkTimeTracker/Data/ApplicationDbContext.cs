@@ -18,6 +18,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<WorkDay> WorkDays => Set<WorkDay>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ApplicationLog> ApplicationLogs => Set<ApplicationLog>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<Notification> Notifications => Set<Notification>();
 
@@ -45,5 +46,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<SystemSetting>()
             .HasIndex(s => s.Key)
             .IsUnique();
+
+        builder.Entity<ApplicationLog>()
+            .HasIndex(l => new { l.Level, l.Timestamp });
+        builder.Entity<ApplicationLog>()
+            .Property(l => l.Message)
+            .HasMaxLength(4000);
+        builder.Entity<ApplicationLog>()
+            .Property(l => l.Category)
+            .HasMaxLength(500);
     }
 }

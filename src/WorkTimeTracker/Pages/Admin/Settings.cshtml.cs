@@ -20,8 +20,8 @@ public class SettingsModel : PageModel
     [BindProperty] public decimal MaxHoursPerDay { get; set; }
     [BindProperty] public decimal OvertimeThreshold { get; set; }
     [BindProperty] public bool TwoStageApproval { get; set; }
-    [BindProperty] public string ShiftStart { get; set; } = "08:00";
-    [BindProperty] public string ShiftEnd { get; set; } = "16:30";
+    [BindProperty] public string ShiftStart { get; set; } = "09:00";
+    [BindProperty] public string ShiftEnd { get; set; } = "18:00";
     [BindProperty] public bool CheckIntervalOverlap { get; set; }
 
     public async Task OnGet()

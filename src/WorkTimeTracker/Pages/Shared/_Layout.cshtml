@@ -26,10 +26,11 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
-        <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark app-navbar sticky-top">
+        <div class="container-xl">
             <a class="navbar-brand fw-semibold" href="@(HomeUrl() ?? "/Index")">
-                <i class="bi bi-clock-history"></i> Учёт рабочего времени
+                <span class="brand-mark"><i class="bi bi-clock-history"></i></span>
+                <span>Учёт рабочего времени</span>
             </a>
             <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav">
                 <span class="navbar-toggler-icon"></span>
@@ -62,7 +63,7 @@
                         @if (unread > 0)
                         {
                             <li class="nav-item">
-                                <a class="nav-link position-relative" href="/Employee/History" title="Уведомления">
+                                <a class="nav-link position-relative" href="/Notifications/Index" title="Уведомления">
                                     <i class="bi bi-bell-fill"></i>
                                     <span class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;">@unread</span>
                                 </a>
@@ -88,20 +89,20 @@
         </div>
     </nav>
 
-    <main class="container py-3">
+    <main class="container-xl py-4">
         @if (TempData["Success"] is string ok)
         {
-            <div class="alert alert-success alert-dismissible fade show">@ok<button class="btn-close" data-bs-dismiss="alert"></button></div>
+            <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-1"></i>@ok<button class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button></div>
         }
         @if (TempData["Error"] is string err)
         {
-            <div class="alert alert-danger alert-dismissible fade show">@err<button class="btn-close" data-bs-dismiss="alert"></button></div>
+            <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-circle me-1"></i>@err<button class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button></div>
         }
         @RenderBody()
     </main>
 
     <footer class="text-center text-muted small py-3 border-top">
-        Учёт рабочего времени · Сборка · Столярка · Швейка · 15
+        © @DateTime.Now.Year · Учёт рабочего времени
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

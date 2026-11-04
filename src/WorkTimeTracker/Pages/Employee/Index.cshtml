@@ -66,7 +66,16 @@
                                 <div class="day-num">@dayNum</div>
                                 @if (day is not null)
                                 {
-                                    <div class="mt-1">@Html.Raw(ViewHelpers.StatusBadge(day.Status))</div>
+                                    <div class="mt-1">
+                                        @if (Model.Employee.Department?.IsTimeOnly == true)
+                                        {
+                                            <span class="badge bg-success-subtle text-success-emphasis status-badge">Сохранено</span>
+                                        }
+                                        else
+                                        {
+                                            @Html.Raw(ViewHelpers.StatusBadge(day.Status))
+                                        }
+                                    </div>
                                     <div class="day-hours mt-1">@day.WorkedHours.ToString("0.##") ч</div>
                                     @if (day.Status == TimeSheetStatus.Rejected && !string.IsNullOrEmpty(day.RejectComment))
                                     {
@@ -81,10 +90,17 @@
         </div>
     </div>
 
-    <div class="mt-3 small text-muted calendar-legend">
-        <span class="me-3"><span class="badge bg-secondary">Черновик</span> — редактируется</span>
-        <span class="me-3"><span class="badge bg-warning text-dark">На утверждении</span> — ожидает мастера</span>
-        <span class="me-3"><span class="badge bg-success">Утверждён</span></span>
-        <span><span class="badge bg-danger">Отклонён</span> — смотрите комментарий</span>
-    </div>
+    @if (Model.Employee.Department?.IsTimeOnly == true)
+    {
+        <div class="mt-3 small text-muted"><i class="bi bi-info-circle"></i> Выберите день и укажите только время начала и окончания. Из расчёта автоматически вычитается 1 час обеда.</div>
+    }
+    else
+    {
+        <div class="mt-3 small text-muted calendar-legend">
+            <span class="me-3"><span class="badge bg-secondary">Черновик</span> — редактируется</span>
+            <span class="me-3"><span class="badge bg-warning text-dark">На утверждении</span> — ожидает мастера</span>
+            <span class="me-3"><span class="badge bg-success">Утверждён</span></span>
+            <span><span class="badge bg-danger">Отклонён</span> — смотрите комментарий</span>
+        </div>
+    }
 }

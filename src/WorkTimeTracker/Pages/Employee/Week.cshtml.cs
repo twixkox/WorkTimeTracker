@@ -54,8 +54,8 @@ public class WeekModel : PageModel
             Days.Add(new DayFormModel
             {
                 Date = date,
-                StartTime = day?.StartTime ?? shift?.Start ?? new TimeOnly(8, 0),
-                EndTime = day?.EndTime ?? shift?.End ?? new TimeOnly(16, 30),
+                StartTime = day?.StartTime ?? shift?.Start ?? ShiftDefaults.Start,
+                EndTime = day?.EndTime ?? shift?.End ?? ShiftDefaults.End,
                 ReturnUrl = $"/Employee/Week?week={WeekStart:yyyy-MM-dd}",
                 Entries = day?.TimeEntries.Select(e => new EntryInput
                 {

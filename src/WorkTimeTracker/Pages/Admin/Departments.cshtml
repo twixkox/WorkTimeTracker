@@ -21,9 +21,13 @@
                         <label class="form-label">Название</label>
                         <input name="Name" class="form-control" value="@(edit?.Name ?? Model.Name)" required />
                     </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" name="IsWeeklyView" value="true" class="form-check-input" checked="@(edit?.IsWeeklyView == true || Model.IsWeeklyView)" />
-                        <label class="form-check-label">Недельный вид табеля (как «15»)</label>
+                    <div class="form-check form-switch mb-2">
+                        <input type="checkbox" name="IsTimeOnly" value="true" class="form-check-input" id="time-only" checked="@(edit?.IsTimeOnly == true || Model.IsTimeOnly)" />
+                        <label class="form-check-label" for="time-only">Только время, без затрат и утверждения</label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input type="checkbox" name="IsWeeklyView" value="true" class="form-check-input" id="weekly-view" checked="@(edit?.IsWeeklyView == true || Model.IsWeeklyView)" />
+                        <label class="form-check-label" for="weekly-view">Недельный вид табеля</label>
                     </div>
                     <button class="btn btn-primary">Сохранить</button>
                     @if (edit is not null)
@@ -46,7 +50,7 @@
                         {
                             <tr class="@(d.IsActive ? "" : "table-secondary")">
                                 <td>@d.Name</td>
-                                <td>@(d.IsWeeklyView ? "Недельный" : "По дням")</td>
+                                <td>@(d.IsTimeOnly ? "Только время" : d.IsWeeklyView ? "Недельный" : "По дням")</td>
                                 <td>@(d.IsActive ? "да" : "нет")</td>
                                 <td>@d.Employees.Count(e => e.IsActive)</td>
                                 <td class="text-end">

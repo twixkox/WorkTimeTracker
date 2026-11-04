@@ -13,15 +13,16 @@ window.workTime = {
 
 (function () {
     function recalc(container) {
+        if (!container) return;
         var start = container.querySelector('.day-start');
         var end = container.querySelector('.day-end');
         var workedEl = container.querySelector('.worked-hours');
         var sumEl = container.querySelector('.entries-hours-sum');
-        if (!start || !end || !workedEl || !sumEl) return;
+        if (!start || !end || !workedEl) return;
 
         var sm = window.workTime.parseMinutes(start.value);
         var em = window.workTime.parseMinutes(end.value);
-        var worked = em > sm ? (em - sm) / 60 : 0;
+        var worked = em > sm ? Math.max(0, (em - sm) / 60 - 1) : 0;
         workedEl.textContent = Math.round(worked * 100) / 100;
 
         var sum = 0;
@@ -29,6 +30,7 @@ window.workTime = {
             sum += window.workTime.parseHours(inp.value);
         });
         sum = Math.round(sum * 100) / 100;
+        if (!sumEl) return;
         sumEl.textContent = sum;
 
         var invalid = sum > worked + 0.001;
@@ -38,22 +40,37 @@ window.workTime = {
         if (table) table.classList.toggle('table-overtime', invalid);
     }
 
+    function renumberRows(container) {
+        container.querySelectorAll('tr.entries-row').forEach(function (row, index) {
+            row.querySelectorAll('[name]').forEach(function (input) {
+                input.name = input.name.replace(/Input\.Entries\[\d+\]/, 'Input.Entries[' + index + ']');
+            });
+        });
+    }
+
     function bindRow(row) {
         var remove = row.querySelector('.remove-row');
         if (remove) {
             remove.addEventListener('click', function () {
+                var container = row.closest('.day-form');
                 row.remove();
-                recalc(row.closest('.day-form'));
+                renumberRows(container);
+                recalc(container);
             });
         }
         var check = row.querySelector('.inhouse-check');
         var select = row.querySelector('.boat-select');
-        function toggleBoat() {
-            if (select) select.disabled = check.checked || select.hasAttribute('data-force-disabled');
+        var description = row.querySelector('.work-description');
+        function toggleInhouse() {
+            if (select) select.disabled = check.checked || check.disabled;
+            if (description) {
+                description.placeholder = check.checked ? 'Описание необязательно' : 'Опишите работы';
+                row.classList.toggle('is-inhouse', check.checked);
+            }
         }
         if (check && select) {
-            toggleBoat();
-            check.addEventListener('change', function () { toggleBoat(); recalc(row.closest('.day-form')); });
+            toggleInhouse();
+            check.addEventListener('change', function () { toggleInhouse(); recalc(row.closest('.day-form')); });
         }
         row.querySelectorAll('.hours-input').forEach(function (inp) {
             inp.addEventListener('input', function () { recalc(row.closest('.day-form')); });
@@ -86,5 +103,16 @@ window.workTime = {
             container.querySelectorAll('tr.entries-row').forEach(bindRow);
             recalc(container);
         });
+
+        var timeOnly = document.getElementById('time-only');
+        var weekly = document.getElementById('weekly-view');
+        if (timeOnly && weekly) {
+            timeOnly.addEventListener('change', function () {
+                if (timeOnly.checked) weekly.checked = false;
+            });
+            weekly.addEventListener('change', function () {
+                if (weekly.checked) timeOnly.checked = false;
+            });
+        }
     });
 })();

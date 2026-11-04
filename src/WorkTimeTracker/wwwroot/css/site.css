@@ -192,6 +192,318 @@ h4, h5, h6 {
     font-weight: 600;
 }
 
+/* ===== Обновлённый интерфейс ===== */
+:root {
+    --app-primary: #3157d5;
+    --app-primary-dark: #2445b5;
+    --app-ink: #182230;
+    --app-muted: #667085;
+    --app-surface: #ffffff;
+    --app-border: #e4e9f2;
+}
+
+html, body {
+    min-height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(49, 87, 213, .06), transparent 28rem),
+        #f5f7fb;
+    color: var(--app-ink);
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+.app-navbar {
+    background: rgba(27, 39, 73, .97) !important;
+    box-shadow: 0 4px 20px rgba(24, 34, 48, .16);
+    backdrop-filter: blur(12px);
+    padding-top: .65rem;
+    padding-bottom: .65rem;
+}
+
+.app-navbar .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .65rem;
+}
+
+.brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: .7rem;
+    background: linear-gradient(135deg, #6784f1, #3157d5);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+
+.app-navbar .nav-link {
+    border-radius: .5rem;
+    margin: .1rem .15rem;
+    padding: .45rem .75rem !important;
+    color: rgba(255, 255, 255, .78);
+    transition: background .15s, color .15s;
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link:focus {
+    color: #fff;
+    background: rgba(255, 255, 255, .09);
+}
+
+.dropdown-menu {
+    border: 1px solid var(--app-border);
+    border-radius: .75rem;
+    box-shadow: 0 12px 32px rgba(24, 34, 48, .14);
+    padding: .45rem;
+}
+
+.dropdown-item {
+    border-radius: .5rem;
+    padding: .55rem .7rem;
+}
+
+.page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.page-heading h4 {
+    color: var(--app-ink);
+    letter-spacing: -.015em;
+}
+
+.page-eyebrow {
+    color: var(--app-primary);
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: .25rem;
+}
+
+.card {
+    border: 1px solid rgba(228, 233, 242, .9);
+    border-radius: 1rem;
+    box-shadow: 0 4px 18px rgba(24, 34, 48, .055);
+}
+
+.card-header {
+    padding: .9rem 1.15rem;
+    border-bottom-color: var(--app-border);
+}
+
+.card-body {
+    padding: 1.15rem;
+}
+
+.list-group-item {
+    border-color: var(--app-border);
+}
+
+.list-group-item-action {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding-top: .75rem;
+    padding-bottom: .75rem;
+    color: #344054;
+    transition: color .15s, background .15s, padding-left .15s;
+}
+
+.list-group-item-action i {
+    color: var(--app-primary);
+    width: 1.1rem;
+    text-align: center;
+}
+
+.list-group-item-action:hover {
+    color: var(--app-primary);
+    background: #f7f9ff;
+    padding-left: 1.35rem;
+}
+
+.list-group-item .badge {
+    margin-left: auto;
+}
+
+.btn {
+    border-radius: .6rem;
+    font-weight: 500;
+    transition: transform .12s, box-shadow .15s, background .15s;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--app-primary);
+    --bs-btn-border-color: var(--app-primary);
+    --bs-btn-hover-bg: var(--app-primary-dark);
+    --bs-btn-hover-border-color: var(--app-primary-dark);
+    --bs-btn-active-bg: var(--app-primary-dark);
+    --bs-btn-active-border-color: var(--app-primary-dark);
+    box-shadow: 0 3px 8px rgba(49, 87, 213, .16);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--app-primary);
+    --bs-btn-border-color: #b8c5ef;
+    --bs-btn-hover-bg: var(--app-primary);
+    --bs-btn-hover-border-color: var(--app-primary);
+}
+
+.form-control,
+.form-select,
+.input-group-text {
+    border-color: #d7deea;
+    border-radius: .6rem;
+}
+
+.form-control,
+.form-select {
+    min-height: 2.5rem;
+}
+
+.form-control-sm,
+.form-select-sm {
+    min-height: 2.15rem;
+}
+
+.form-label {
+    color: #475467;
+    font-size: .84rem;
+    font-weight: 600;
+}
+
+.form-check-input:checked {
+    background-color: var(--app-primary);
+    border-color: var(--app-primary);
+}
+
+.alert {
+    border: 0;
+    border-radius: .75rem;
+    box-shadow: 0 2px 8px rgba(24, 34, 48, .04);
+}
+
+.table > tbody > tr {
+    transition: background .12s;
+}
+
+.table-hover > tbody > tr:hover > * {
+    --bs-table-bg-state: #f6f8ff;
+}
+
+.shift-panel {
+    padding: 1rem;
+    border: 1px solid #e0e6f4;
+    border-radius: .8rem;
+    background: linear-gradient(135deg, #f8faff, #f3f6fd);
+}
+
+.entries-row.is-inhouse td {
+    background: #f5fbf8;
+}
+
+.filter-panel {
+    max-width: 48rem;
+}
+
+.log-tabs {
+    gap: .4rem;
+}
+
+.log-tabs .nav-link {
+    color: #475467;
+    background: #fff;
+    border: 1px solid var(--app-border);
+}
+
+.log-tabs .nav-link.active {
+    background: var(--app-primary);
+    border-color: var(--app-primary);
+}
+
+.log-entry {
+    padding: 1rem 1.15rem;
+}
+
+.log-icon {
+    font-size: 1.2rem;
+    line-height: 1.4;
+}
+
+.log-message {
+    overflow-wrap: anywhere;
+}
+
+.log-exception {
+    max-height: 24rem;
+    overflow: auto;
+    padding: .75rem;
+    border-radius: .5rem;
+    background: #f8f9fb;
+    font-size: .75rem;
+    white-space: pre-wrap;
+}
+
+.empty-state {
+    display: grid;
+    place-items: center;
+    gap: .6rem;
+    padding: 3.5rem 1rem;
+    color: var(--app-muted);
+}
+
+.empty-state i {
+    font-size: 2rem;
+    color: #98a2b3;
+}
+
+footer {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, .6);
+}
+
+@media (max-width: 767.98px) {
+    main.container-xl {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .page-heading {
+        align-items: flex-start;
+    }
+
+    .calendar-day {
+        min-height: 78px;
+        padding: .35rem;
+    }
+
+    .calendar-day .status-badge {
+        font-size: .58rem;
+        padding: .25em .4em;
+    }
+
+    .table thead th {
+        letter-spacing: 0;
+    }
+}
+
 /* ===== Печатная форма ===== */
 @media print {
     nav, footer, .no-print, .btn {

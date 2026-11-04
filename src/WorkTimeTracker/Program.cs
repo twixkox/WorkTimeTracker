@@ -68,10 +68,13 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ILoggerProvider, DatabaseLoggerProvider>();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<MissingTimeSheetNotificationService>();
+builder.Services.AddHostedService<DailyMissingTimeSheetWorker>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<ExcelService>();
 
@@ -97,6 +100,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
+app.UseMiddleware<WorkTimeTracker.Middleware.RequestLoggingMiddleware>();
 app.UseAuthorization();
 app.MapRazorPages();
 app.MapGet("/", context =>

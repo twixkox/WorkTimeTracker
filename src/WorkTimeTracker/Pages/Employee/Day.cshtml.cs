@@ -63,8 +63,8 @@ public class DayModel : PageModel
         Input = new DayFormModel
         {
             Date = date,
-            StartTime = Day?.StartTime ?? shift?.Start ?? new TimeOnly(8, 0),
-            EndTime = Day?.EndTime ?? shift?.End ?? new TimeOnly(16, 30),
+            StartTime = Day?.StartTime ?? shift?.Start ?? ShiftDefaults.Start,
+            EndTime = Day?.EndTime ?? shift?.End ?? ShiftDefaults.End,
             ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/Employee/Index" : returnUrl!,
             Entries = Day?.TimeEntries.Select(e => new EntryInput
             {
@@ -102,9 +102,10 @@ public class DayModel : PageModel
         day.StartTime = Input.StartTime;
         day.EndTime = Input.EndTime;
 
+        var isTimeOnly = Employee.Department?.IsTimeOnly == true;
         var settings = await _settings.GetValidationSettingsAsync();
-        var entries = Input.EffectiveEntries();
-        var validation = TimeCalculationService.Validate(Input.StartTime, Input.EndTime, MapEntries(entries), settings, strict: submit);
+        var entries = isTimeOnly ? new List<EntryInput>() : Input.EffectiveEntries();
+        var validation = TimeCalculationService.Validate(Input.StartTime, Input.EndTime, MapEntries(entries), settings, strict: submit && !isTimeOnly);
 
         foreach (var state in ModelState)
         {
@@ -115,13 +116,13 @@ public class DayModel : PageModel
             }
         }
 
-        if (submit && validation.HasErrors)
+        if ((submit || isTimeOnly) && validation.HasErrors)
         {
             Issues = validation.Issues;
             await PrepareViewAsync(day);
             return Page();
         }
-        if (entries.Count == 0 && submit)
+        if (entries.Count == 0 && submit && !isTimeOnly)
         {
             Issues = new List<ValidationIssue>
             {
@@ -150,7 +151,7 @@ public class DayModel : PageModel
         await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName,
             isNew ? "Created" : "Updated", "WorkDay", day.Id.ToString(), $"{Employee.FullName}, {day.Date:dd.MM.yyyy}");
 
-        if (submit)
+        if (submit && !isTimeOnly)
         {
             if (WorkflowService.TrySubmit(day))
             {
@@ -162,7 +163,9 @@ public class DayModel : PageModel
         }
         else
         {
-            TempData["Success"] = $"Черновик за {day.Date:dd.MM.yyyy} сохранён.";
+            TempData["Success"] = isTimeOnly
+                ? $"Время за {day.Date:dd.MM.yyyy} сохранено."
+                : $"Черновик за {day.Date:dd.MM.yyyy} сохранён.";
         }
 
         if (!string.IsNullOrEmpty(Input.ReturnUrl) && Url.IsLocalUrl(Input.ReturnUrl))

@@ -4,6 +4,12 @@ using WorkTimeTracker.Models;
 
 namespace WorkTimeTracker.Services;
 
+public static class ShiftDefaults
+{
+    public static readonly TimeOnly Start = new(9, 0);
+    public static readonly TimeOnly End = new(18, 0);
+}
+
 /// <summary>Чтение настроек системы из БД с значениями по умолчанию.</summary>
 public class SettingsService
 {

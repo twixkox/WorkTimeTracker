@@ -22,7 +22,7 @@ public class DepartmentsModel : PageModel
 
     public List<Department> Departments { get; private set; } = new();
 
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public int? EditId { get; set; }
 
     [BindProperty]
@@ -30,6 +30,9 @@ public class DepartmentsModel : PageModel
 
     [BindProperty]
     public bool IsWeeklyView { get; set; }
+
+    [BindProperty]
+    public bool IsTimeOnly { get; set; }
 
     public async Task OnGet()
         => Departments = await _db.Departments.Include(d => d.Employees).OrderBy(d => d.Name).ToListAsync();
@@ -42,16 +45,18 @@ public class DepartmentsModel : PageModel
             return RedirectToPage();
         }
 
+        var weekly = IsWeeklyView && !IsTimeOnly;
         Department? dept;
         if (EditId is int id && (dept = await _db.Departments.FindAsync(id)) is not null)
         {
             dept.Name = Name.Trim();
-            dept.IsWeeklyView = IsWeeklyView;
+            dept.IsWeeklyView = weekly;
+            dept.IsTimeOnly = IsTimeOnly;
             await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Updated", "Department", id.ToString(), Name);
         }
         else
         {
-            _db.Departments.Add(new Department { Name = Name.Trim(), IsWeeklyView = IsWeeklyView });
+            _db.Departments.Add(new Department { Name = Name.Trim(), IsWeeklyView = weekly, IsTimeOnly = IsTimeOnly });
             await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Created", "Department", null, Name);
         }
         await _db.SaveChangesAsync();

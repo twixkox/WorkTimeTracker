@@ -56,8 +56,8 @@ USING (VALUES
     (N'MaxHoursPerDay',      N'16'),
     (N'OvertimeThreshold',   N'8'),
     (N'TwoStageApproval',    N'false'),
-    (N'ShiftStart',          N'08:00'),
-    (N'ShiftEnd',            N'16:30'),
+    (N'ShiftStart',          N'09:00'),
+    (N'ShiftEnd',            N'18:00'),
     (N'CheckIntervalOverlap',N'false')
 ) AS source ([Key], [Value])
 ON target.[Key] = source.[Key]

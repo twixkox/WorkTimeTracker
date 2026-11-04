@@ -40,6 +40,7 @@
                 WorkTypes = Model.WorkTypes,
                 CanEdit = Model.CanEdit,
                 ExistingDay = Model.Day,
+                IsTimeOnly = Model.Employee?.Department?.IsTimeOnly == true,
                 ShowActions = false }" />
             @if (Model.CanEdit && Model.Day?.Id > 0)
             {
@@ -51,7 +52,7 @@
     </div>
 </div>
 
-@if (Model.Day?.Id > 0)
+@if (Model.Day?.Id > 0 && Model.Employee?.Department?.IsTimeOnly != true)
 {
     <div class="card mb-3">
         <div class="card-header py-2"><strong>Проверка</strong></div>

@@ -149,6 +149,44 @@ namespace WorkTimeTracker.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("WorkTimeTracker.Models.ApplicationLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Exception")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestPath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Level", "Timestamp");
+
+                    b.ToTable("ApplicationLogs");
+                });
+
             modelBuilder.Entity("WorkTimeTracker.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -286,6 +324,9 @@ namespace WorkTimeTracker.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsTimeOnly")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsWeeklyView")

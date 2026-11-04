@@ -1,0 +1,81 @@
+@page
+@model WorkTimeTracker.Pages.Admin.LogsModel
+@using Microsoft.Extensions.Logging
+@{
+    ViewData["Title"] = "Журнал логов";
+    string Active(LogLevel? level) => Model.Level == level ? "active" : "";
+}
+
+<div class="page-heading">
+    <div>
+        <div class="page-eyebrow">Диагностика</div>
+        <h4 class="mb-0">Журнал логов</h4>
+        <div class="text-muted small mt-1">Системные события, предупреждения и ошибки приложения</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="/Admin/Index"><i class="bi bi-arrow-left"></i> Администрирование</a>
+</div>
+
+<ul class="nav nav-pills log-tabs mb-3">
+    <li class="nav-item"><a class="nav-link @Active(null)" href="?search=@Model.Search">Все</a></li>
+    <li class="nav-item"><a class="nav-link @Active(LogLevel.Error)" href="?level=Error&search=@Model.Search"><i class="bi bi-x-circle"></i> Ошибки <span class="badge text-bg-danger">@Model.ErrorCount</span></a></li>
+    <li class="nav-item"><a class="nav-link @Active(LogLevel.Warning)" href="?level=Warning&search=@Model.Search"><i class="bi bi-exclamation-triangle"></i> Предупреждения <span class="badge text-bg-warning">@Model.WarningCount</span></a></li>
+    <li class="nav-item"><a class="nav-link @Active(LogLevel.Information)" href="?level=Information&search=@Model.Search"><i class="bi bi-info-circle"></i> Обычные <span class="badge text-bg-secondary">@Model.InformationCount</span></a></li>
+</ul>
+
+<form method="get" class="filter-panel mb-3">
+    @if (Model.Level is not null) { <input type="hidden" name="level" value="@Model.Level" /> }
+    <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input name="search" value="@Model.Search" class="form-control" placeholder="Сообщение, пользователь или адрес запроса" />
+        <button class="btn btn-primary">Найти</button>
+        @if (!string.IsNullOrWhiteSpace(Model.Search)) { <a class="btn btn-outline-secondary" href="?level=@Model.Level">Сбросить</a> }
+    </div>
+</form>
+
+<div class="card log-card">
+    @if (Model.Logs.Count == 0)
+    {
+        <div class="empty-state"><i class="bi bi-journal-check"></i><div>Записи не найдены</div></div>
+    }
+    else
+    {
+        <div class="list-group list-group-flush">
+            @foreach (var log in Model.Logs)
+            {
+                var badge = log.Level >= LogLevel.Error ? "danger" : log.Level == LogLevel.Warning ? "warning" : "info";
+                var icon = log.Level >= LogLevel.Error ? "x-circle" : log.Level == LogLevel.Warning ? "exclamation-triangle" : "info-circle";
+                <div class="list-group-item log-entry">
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="log-icon text-@badge"><i class="bi bi-@icon"></i></span>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex flex-wrap justify-content-between gap-2">
+                                <strong class="log-message">@log.Message</strong>
+                                <time class="text-muted small text-nowrap">@log.Timestamp.ToString("dd.MM.yyyy HH:mm:ss")</time>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                <span class="badge text-bg-@badge me-2">@log.Level</span>
+                                @log.Category
+                                @if (!string.IsNullOrEmpty(log.UserName)) { <span> · @log.UserName</span> }
+                            </div>
+                            @if (!string.IsNullOrEmpty(log.RequestPath)) { <div class="small font-monospace mt-1 text-break">@log.RequestPath</div> }
+                            @if (!string.IsNullOrEmpty(log.Exception))
+                            {
+                                <details class="mt-2"><summary class="small text-danger">Подробности ошибки</summary><pre class="log-exception mt-2">@log.Exception</pre></details>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-3"><ul class="pagination pagination-sm">
+        @for (var i = 1; i <= Model.TotalPages; i++)
+        {
+            <li class="page-item @(i == Model.Page ? "active" : "")"><a class="page-link" href="?p=@i&level=@Model.Level&search=@Model.Search">@i</a></li>
+        }
+    </ul></nav>
+}

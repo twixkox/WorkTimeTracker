@@ -11,4 +11,5 @@ public class DayFormPartialModel
     public bool CanEdit { get; init; } = true;
     public WorkDay? ExistingDay { get; init; }
     public bool ShowActions { get; init; } = true;
+    public bool IsTimeOnly { get; init; }
 }

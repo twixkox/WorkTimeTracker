@@ -7,9 +7,11 @@ namespace WorkTimeTracker.Services;
 /// </summary>
 public static class TimeCalculationService
 {
-    /// <summary>Отработанные часы = окончание − начало (0, если окончание раньше начала).</summary>
+    public const decimal LunchHours = 1m;
+
+    /// <summary>Отработанные часы = окончание − начало − 1 час обеда (не меньше нуля).</summary>
     public static decimal WorkedHours(TimeOnly start, TimeOnly end)
-        => end <= start ? 0m : Math.Round((decimal)(end - start).TotalHours, 2);
+        => end <= start ? 0m : Math.Max(0m, Math.Round((decimal)(end - start).TotalHours - LunchHours, 2));
 
     /// <summary>Сумма часов по записям затрат.</summary>
     public static decimal EntriesHours(IEnumerable<TimeEntry> entries)
@@ -56,8 +58,9 @@ public static class TimeCalculationService
             result.Add(ValidationSeverity.Warning, "boat-ignored",
                 "Для внутрицеховых работ № катера не требуется — значение будет проигнорировано.");
 
-        if (entries.Any(e => string.IsNullOrWhiteSpace(e.WorkDescription)))
-            result.Add(ValidationSeverity.Warning, "work-empty", "Есть записи без описания выполненных работ.");
+        if (entries.Any(e => !e.IsInhouse && string.IsNullOrWhiteSpace(e.WorkDescription)))
+            result.Add(strict ? ValidationSeverity.Error : ValidationSeverity.Warning,
+                "work-empty", "Для работ по катеру укажите описание выполненных работ.");
 
         var duplicates = entries
             .Where(e => e.BoatId is not null)

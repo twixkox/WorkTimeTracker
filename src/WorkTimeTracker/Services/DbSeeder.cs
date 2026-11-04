@@ -38,16 +38,20 @@ public static class DbSeeder
         }
         await db.SaveChangesAsync();
 
-        Department Dept(string name, bool weekly = false) =>
+        Department Dept(string name, bool weekly = false, bool timeOnly = false) =>
             db.Departments.Local.FirstOrDefault(d => d.Name == name)
             ?? db.Departments.FirstOrDefault(d => d.Name == name)
-            ?? new Department { Name = name, IsWeeklyView = weekly };
+            ?? new Department { Name = name, IsWeeklyView = weekly, IsTimeOnly = timeOnly };
 
         var assembly = Dept("Сборка");
         var carpentry = Dept("Столярка");
         var sewing = Dept("Швейка");
         var dept15 = Dept("15", weekly: true);
-        foreach (var d in new[] { assembly, carpentry, sewing, dept15 })
+        var warehouse = Dept("Склад", timeOnly: true);
+        var driver = Dept("Водитель", timeOnly: true);
+        var painting = Dept("Малярка");
+        var welding = Dept("Сварка");
+        foreach (var d in new[] { assembly, carpentry, sewing, dept15, warehouse, driver, painting, welding })
             if (d.Id == 0) db.Departments.Add(d);
         await db.SaveChangesAsync();
 
@@ -187,9 +191,17 @@ public static class DbSeeder
         await EnsureSettingAsync(SettingKeys.MaxHoursPerDay, "16");
         await EnsureSettingAsync(SettingKeys.OvertimeThreshold, "8");
         await EnsureSettingAsync(SettingKeys.TwoStageApproval, "false");
-        await EnsureSettingAsync(SettingKeys.ShiftStart, "08:00");
-        await EnsureSettingAsync(SettingKeys.ShiftEnd, "16:30");
+        await EnsureSettingAsync(SettingKeys.ShiftStart, ShiftDefaults.Start.ToString("HH:mm"));
+        await EnsureSettingAsync(SettingKeys.ShiftEnd, ShiftDefaults.End.ToString("HH:mm"));
         await EnsureSettingAsync(SettingKeys.CheckIntervalOverlap, "false");
+
+        var shiftStart = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == SettingKeys.ShiftStart);
+        var shiftEnd = await db.SystemSettings.FirstOrDefaultAsync(s => s.Key == SettingKeys.ShiftEnd);
+        if (shiftStart?.Value == "08:00" && shiftEnd?.Value == "16:30")
+        {
+            shiftStart.Value = ShiftDefaults.Start.ToString("HH:mm");
+            shiftEnd.Value = ShiftDefaults.End.ToString("HH:mm");
+        }
         await db.SaveChangesAsync();
     }
 }

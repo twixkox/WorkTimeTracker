@@ -1,145 +1,156 @@
 @model WorkTimeTracker.Pages.Employee.DayFormPartialModel
 @{
     var day = Model.Day;
-    var entries = day.Entries.Count > 0 ? day.Entries : new List<WorkTimeTracker.Pages.Employee.EntryInput> { new() };
+    var entries = day.Entries.ToList();
+    while (entries.Count < 4) entries.Add(new WorkTimeTracker.Pages.Employee.EntryInput());
     var boats = Model.Boats;
     var workTypes = Model.WorkTypes;
 }
-<div class="day-form" data-date="@day.Date">
-    <input type="hidden" name="Input.Date" value="@day.Date:yyyy-MM-dd" />
+<div class="day-form @(Model.IsTimeOnly ? "time-only-form" : "")" data-date="@day.Date">
+    <input type="hidden" name="Input.Date" value="@day.Date.ToString("yyyy-MM-dd")" />
     <input type="hidden" name="Input.ReturnUrl" value="@day.ReturnUrl" />
 
-    <div class="row g-2 align-items-end mb-2">
-        <div class="col-auto">
-            <label class="form-label mb-0 small">Начало рабочего дня</label>
-            <input type="time" name="Input.StartTime" value="@day.StartTime.ToString("HH:mm")" class="form-control form-control-sm day-start"
-                   @(Model.CanEdit ? "" : "disabled") />
-        </div>
-        <div class="col-auto">
-            <label class="form-label mb-0 small">Окончание рабочего дня</label>
-            <input type="time" name="Input.EndTime" value="@day.EndTime.ToString("HH:mm")" class="form-control form-control-sm day-end"
-                   @(Model.CanEdit ? "" : "disabled") />
-        </div>
-        <div class="col-auto ms-auto">
-            <div class="d-flex gap-3 align-items-center">
-                <div class="text-end">
-                    <div class="small text-muted">Отработано</div>
-                    <div class="fs-5 fw-semibold text-nowrap"><span class="worked-hours">0</span> ч</div>
-                </div>
-                <div class="vr"></div>
-                <div class="text-end">
-                    <div class="small text-muted">Сумма затрат</div>
-                    <div class="fs-5 fw-semibold text-nowrap"><span class="entries-hours-sum">0</span> ч</div>
-                </div>
+    <div class="shift-panel">
+        <div class="row g-3 align-items-end">
+            <div class="col-6 col-md-3">
+                <label class="form-label">Начало рабочего дня</label>
+                <input type="time" name="Input.StartTime" value="@day.StartTime.ToString("HH:mm")" class="form-control day-start"
+                       @(Model.CanEdit ? "" : "disabled") />
             </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label">Окончание рабочего дня</label>
+                <input type="time" name="Input.EndTime" value="@day.EndTime.ToString("HH:mm")" class="form-control day-end"
+                       @(Model.CanEdit ? "" : "disabled") />
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="small text-muted">Отработано <span title="Из времени смены вычитается 1 час обеда">(−1 ч обед)</span></div>
+                <div class="fs-4 fw-semibold text-nowrap"><span class="worked-hours">0</span> ч</div>
+            </div>
+            @if (!Model.IsTimeOnly)
+            {
+                <div class="col-6 col-md-3 text-md-end">
+                    <div class="small text-muted">Сумма затрат</div>
+                    <div class="fs-4 fw-semibold text-nowrap"><span class="entries-hours-sum">0</span> ч</div>
+                </div>
+            }
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-sm align-middle entries-table mb-1">
-            <thead class="table-light">
-                <tr>
-                    <th style="min-width:11rem;">№ катера</th>
-                    <th style="width:7rem;">Время затрат, ч</th>
-                    <th>Выполненные работы</th>
-                    <th style="width:9rem;">Внутрицеховые</th>
-                    <th style="width:2.5rem;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (var i = 0; i < entries.Count; i++)
-                {
-                    var e = entries[i];
-                    <tr class="entries-row">
-                        <td>
-                            <select name="Input.Entries[@i].BoatId" class="form-select form-select-sm boat-select"
-                                    disabled="@(Model.CanEdit ? null : "disabled")">
-                                <option value="">— выберите катер —</option>
-                                @foreach (var b in boats)
-                                {
-                                    <option value="@b.Id" selected="@(e.BoatId == b.Id)">@b.Number@(string.IsNullOrEmpty(b.Name) ? "" : $" · {b.Name}")</option>
-                                }
-                            </select>
-                        </td>
-                        <td>
-                            <input name="Input.Entries[@i].Hours" value="@(e.Hours?.ToString("0.##"))"
-                                   class="form-control form-control-sm hours-input" inputmode="decimal" placeholder="0,0"
-                                   disabled="@(Model.CanEdit ? null : "disabled")" />
-                        </td>
-                        <td>
-                            <input name="Input.Entries[@i].WorkDescription" value="@e.WorkDescription" list="worktypes-@day.Date"
-                                   class="form-control form-control-sm" placeholder="Выполненные работы"
-                                   disabled="@(Model.CanEdit ? null : "disabled")" />
-                        </td>
-                        <td class="text-center">
-                            <input type="checkbox" name="Input.Entries[@i].IsInhouse" value="true" class="form-check-input inhouse-check"
-                                   checked="@(e.IsInhouse ? "checked" : null)"
-                                   disabled="@(Model.CanEdit ? null : "disabled")" />
-                        </td>
-                        <td>
-                            @if (Model.CanEdit)
-                            {
-                                <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-row" title="Удалить строку">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    <datalist id="worktypes-@day.Date">
-        @foreach (var wt in workTypes)
-        {
-            <option value="@wt.Name"></option>
-        }
-    </datalist>
-
-    @if (Model.CanEdit)
+    @if (!Model.IsTimeOnly)
     {
-        <button type="button" class="btn btn-sm btn-outline-primary add-row">
-            <i class="bi bi-plus-lg"></i> Добавить запись
-        </button>
-    }
-
-    <template class="row-template">
-        <tr class="entries-row">
-            <td>
-                <select name="Input.Entries[__i__].BoatId" class="form-select form-select-sm boat-select">
-                    <option value="">— выберите катер —</option>
-                    @foreach (var b in boats)
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4 mb-2">
+            <h6 class="mb-0">Учёт затрат времени</h6>
+            <span class="small text-muted">Для внутрицеховых работ описание необязательно</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle entries-table mb-1">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width:11rem;">№ катера</th>
+                        <th style="width:7rem;">Время, ч</th>
+                        <th>Выполненные работы</th>
+                        <th style="width:9rem;">Внутрицеховые</th>
+                        <th style="width:2.5rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < entries.Count; i++)
                     {
-                        <option value="@b.Id">@b.Number@(string.IsNullOrEmpty(b.Name) ? "" : $" · {b.Name}")</option>
+                        var e = entries[i];
+                        <tr class="entries-row">
+                            <td>
+                                <select name="Input.Entries[@i].BoatId" class="form-select form-select-sm boat-select"
+                                        disabled="@(Model.CanEdit ? null : "disabled")">
+                                    <option value="">— выберите катер —</option>
+                                    @foreach (var b in boats)
+                                    {
+                                        <option value="@b.Id" selected="@(e.BoatId == b.Id)">@b.Number@(string.IsNullOrEmpty(b.Name) ? "" : $" · {b.Name}")</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input name="Input.Entries[@i].Hours" value="@(e.Hours?.ToString("0.##"))"
+                                       class="form-control form-control-sm hours-input" inputmode="decimal" placeholder="0,0"
+                                       disabled="@(Model.CanEdit ? null : "disabled")" />
+                            </td>
+                            <td>
+                                <input name="Input.Entries[@i].WorkDescription" value="@e.WorkDescription" list="worktypes-@day.Date"
+                                       class="form-control form-control-sm work-description" placeholder="Опишите работы"
+                                       disabled="@(Model.CanEdit ? null : "disabled")" />
+                            </td>
+                            <td class="text-center">
+                                <input type="checkbox" name="Input.Entries[@i].IsInhouse" value="true" class="form-check-input inhouse-check"
+                                       checked="@(e.IsInhouse ? "checked" : null)"
+                                       disabled="@(Model.CanEdit ? null : "disabled")" />
+                            </td>
+                            <td>
+                                @if (Model.CanEdit)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-row" title="Удалить строку">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                }
+                            </td>
+                        </tr>
                     }
-                </select>
-            </td>
-            <td>
-                <input name="Input.Entries[__i__].Hours" class="form-control form-control-sm hours-input" inputmode="decimal" placeholder="0,0" />
-            </td>
-            <td>
-                <input name="Input.Entries[__i__].WorkDescription" list="worktypes-@day.Date" class="form-control form-control-sm" placeholder="Выполненные работы" />
-            </td>
-            <td class="text-center">
-                <input type="checkbox" name="Input.Entries[__i__].IsInhouse" value="true" class="form-check-input inhouse-check" />
-            </td>
-            <td>
-                <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-row" title="Удалить строку">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </td>
-        </tr>
-    </template>
+                </tbody>
+            </table>
+        </div>
+        <datalist id="worktypes-@day.Date">
+            @foreach (var wt in workTypes)
+            {
+                <option value="@wt.Name"></option>
+            }
+        </datalist>
+
+        @if (Model.CanEdit)
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary add-row mt-2">
+                <i class="bi bi-plus-lg"></i> Добавить запись
+            </button>
+        }
+
+        <template class="row-template">
+            <tr class="entries-row">
+                <td>
+                    <select name="Input.Entries[__i__].BoatId" class="form-select form-select-sm boat-select">
+                        <option value="">— выберите катер —</option>
+                        @foreach (var b in boats)
+                        {
+                            <option value="@b.Id">@b.Number@(string.IsNullOrEmpty(b.Name) ? "" : $" · {b.Name}")</option>
+                        }
+                    </select>
+                </td>
+                <td>
+                    <input name="Input.Entries[__i__].Hours" class="form-control form-control-sm hours-input" inputmode="decimal" placeholder="0,0" />
+                </td>
+                <td>
+                    <input name="Input.Entries[__i__].WorkDescription" list="worktypes-@day.Date" class="form-control form-control-sm work-description" placeholder="Опишите работы" />
+                </td>
+                <td class="text-center">
+                    <input type="checkbox" name="Input.Entries[__i__].IsInhouse" value="true" class="form-check-input inhouse-check" />
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-row" title="Удалить строку">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </td>
+            </tr>
+        </template>
+    }
 
     @if (Model.ShowActions && Model.CanEdit)
     {
-        <div class="d-flex gap-2 mt-3 no-print">
-            <button type="submit" formaction="?handler=Save" class="btn btn-outline-secondary">
-                <i class="bi bi-save"></i> Сохранить черновик
+        <div class="d-flex flex-wrap gap-2 mt-4 no-print">
+            <button type="submit" formaction="?handler=Save" class="btn @(Model.IsTimeOnly ? "btn-primary" : "btn-outline-secondary")">
+                <i class="bi bi-save"></i> @(Model.IsTimeOnly ? "Сохранить время" : "Сохранить черновик")
             </button>
-            <button type="submit" formaction="?handler=Submit" class="btn btn-primary">
-                <i class="bi bi-send"></i> Отправить на утверждение
-            </button>
+            @if (!Model.IsTimeOnly)
+            {
+                <button type="submit" formaction="?handler=Submit" class="btn btn-primary">
+                    <i class="bi bi-send"></i> Отправить на утверждение
+                </button>
+            }
         </div>
     }
 </div>

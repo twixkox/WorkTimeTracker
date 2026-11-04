@@ -22,7 +22,7 @@ public class BoatsModel : PageModel
 
     public List<Boat> Boats { get; private set; } = new();
 
-    [BindProperty] public int? EditId { get; set; }
+    [BindProperty(SupportsGet = true)] public int? EditId { get; set; }
     [BindProperty] public string Number { get; set; } = string.Empty;
     [BindProperty] public string? Name { get; set; }
     [BindProperty] public string? Customer { get; set; }
