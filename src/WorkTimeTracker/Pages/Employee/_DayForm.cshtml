@@ -12,21 +12,26 @@
     <div class="row g-2 align-items-end mb-2">
         <div class="col-auto">
             <label class="form-label mb-0 small">Начало рабочего дня</label>
-            <input type="time" name="Input.StartTime" value="@day.StartTime:HH\\:mm" class="form-control form-control-sm day-start"
+            <input type="time" name="Input.StartTime" value="@day.StartTime.ToString("HH:mm")" class="form-control form-control-sm day-start"
                    @(Model.CanEdit ? "" : "disabled") />
         </div>
         <div class="col-auto">
             <label class="form-label mb-0 small">Окончание рабочего дня</label>
-            <input type="time" name="Input.EndTime" value="@day.EndTime:HH\\:mm" class="form-control form-control-sm day-end"
+            <input type="time" name="Input.EndTime" value="@day.EndTime.ToString("HH:mm")" class="form-control form-control-sm day-end"
                    @(Model.CanEdit ? "" : "disabled") />
         </div>
-        <div class="col-auto">
-            <label class="form-label mb-0 small">Отработано</label>
-            <div class="form-control-sm px-0"><span class="worked-hours fw-semibold">0</span> ч</div>
-        </div>
-        <div class="col-auto ms-auto text-end">
-            <label class="form-label mb-0 small">Сумма затрат</label>
-            <div class="form-control-sm px-0"><span class="entries-hours-sum fw-semibold">0</span> ч</div>
+        <div class="col-auto ms-auto">
+            <div class="d-flex gap-3 align-items-center">
+                <div class="text-end">
+                    <div class="small text-muted">Отработано</div>
+                    <div class="fs-5 fw-semibold text-nowrap"><span class="worked-hours">0</span> ч</div>
+                </div>
+                <div class="vr"></div>
+                <div class="text-end">
+                    <div class="small text-muted">Сумма затрат</div>
+                    <div class="fs-5 fw-semibold text-nowrap"><span class="entries-hours-sum">0</span> ч</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -34,7 +39,7 @@
         <table class="table table-sm align-middle entries-table mb-1">
             <thead class="table-light">
                 <tr>
-                    <th style="width:9rem;">№ катера</th>
+                    <th style="min-width:11rem;">№ катера</th>
                     <th style="width:7rem;">Время затрат, ч</th>
                     <th>Выполненные работы</th>
                     <th style="width:9rem;">Внутрицеховые</th>
@@ -49,7 +54,7 @@
                         <td>
                             <select name="Input.Entries[@i].BoatId" class="form-select form-select-sm boat-select"
                                     disabled="@(Model.CanEdit ? null : "disabled")">
-                                <option value="">— выберите —</option>
+                                <option value="">— выберите катер —</option>
                                 @foreach (var b in boats)
                                 {
                                     <option value="@b.Id" selected="@(e.BoatId == b.Id)">@b.Number@(string.IsNullOrEmpty(b.Name) ? "" : $" · {b.Name}")</option>
@@ -102,7 +107,7 @@
         <tr class="entries-row">
             <td>
                 <select name="Input.Entries[__i__].BoatId" class="form-select form-select-sm boat-select">
-                    <option value="">— выберите —</option>
+                    <option value="">— выберите катер —</option>
                     @foreach (var b in boats)
                     {
                         <option value="@b.Id">@b.Number@(string.IsNullOrEmpty(b.Name) ? "" : $" · {b.Name}")</option>

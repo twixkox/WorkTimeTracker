@@ -24,10 +24,10 @@ GO
 -- Подразделения (участки). IsWeeklyView = 1 — недельный вид табеля, как у «15».
 SET IDENTITY_INSERT [dbo].[Departments] ON;
 INSERT INTO [dbo].[Departments] ([Id], [Name], [IsWeeklyView], [IsActive]) VALUES
-    (1, N'Сбор',    0, 1),
-    (2, N'Столяр',  0, 1),
-    (3, N'Швейка',  0, 1),
-    (4, N'15',      1, 1);
+    (1, N'Сборка',  0, 1),
+    (2, N'Столярка', 0, 1),
+    (3, N'Швейка',   0, 1),
+    (4, N'15',       1, 1);
 SET IDENTITY_INSERT [dbo].[Departments] OFF;
 GO
 

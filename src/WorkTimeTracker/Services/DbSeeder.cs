@@ -21,13 +21,30 @@ public static class DbSeeder
                 await roleManager.CreateAsync(new IdentityRole(role));
 
         // --- Подразделения ---
+        // Переименование старых названий в актуальные (миграция данных).
+        var renameMap = new Dictionary<string, (string Name, bool Weekly)>
+        {
+            ["Сбор"] = ("Сборка", false),
+            ["Столяр"] = ("Столярка", false),
+        };
+        foreach (var (oldName, (newName, weekly)) in renameMap)
+        {
+            var legacy = await db.Departments.FirstOrDefaultAsync(d => d.Name == oldName);
+            if (legacy is not null)
+            {
+                legacy.Name = newName;
+                legacy.IsWeeklyView = weekly;
+            }
+        }
+        await db.SaveChangesAsync();
+
         Department Dept(string name, bool weekly = false) =>
             db.Departments.Local.FirstOrDefault(d => d.Name == name)
             ?? db.Departments.FirstOrDefault(d => d.Name == name)
             ?? new Department { Name = name, IsWeeklyView = weekly };
 
-        var assembly = Dept("Сбор");
-        var carpentry = Dept("Столяр");
+        var assembly = Dept("Сборка");
+        var carpentry = Dept("Столярка");
         var sewing = Dept("Швейка");
         var dept15 = Dept("15", weekly: true);
         foreach (var d in new[] { assembly, carpentry, sewing, dept15 })

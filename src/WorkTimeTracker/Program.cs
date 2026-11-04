@@ -1,3 +1,5 @@
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WorkTimeTracker;
@@ -6,6 +8,9 @@ using WorkTimeTracker.Models;
 using WorkTimeTracker.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Русский текст в HTML не кодируется в числовые сущности.
+builder.Services.AddSingleton(HtmlEncoder.Create(UnicodeRanges.All));
 
 // Провайдер БД: "Sqlite" (по умолчанию, файл worktime.db) или "SqlServer" (MSSQL).
 var provider = builder.Configuration["Database:Provider"] ?? "Sqlite";
@@ -30,7 +35,8 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddErrorDescriber<RussianIdentityErrorDescriber>();
 
 builder.Services.AddRazorPages(options =>
 {

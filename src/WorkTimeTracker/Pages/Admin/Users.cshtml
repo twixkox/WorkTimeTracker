@@ -31,7 +31,7 @@
                                 <select name="role" class="form-select form-select-sm" style="width: 11rem;">
                                     @foreach (var r in AppRoles.All)
                                     {
-                                        <option value="@r" selected="@(roles.FirstOrDefault() == r)">@r</option>
+                                        <option value="@r" selected="@(roles.FirstOrDefault() == r)">@RoleName.ToRussian(r)</option>
                                     }
                                 </select>
                                 <button class="btn btn-sm btn-outline-primary">OK</button>
