@@ -6,3 +6,11 @@ out/
 *.db
 *.db-shm
 *.db-wal
+App_Data/
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key

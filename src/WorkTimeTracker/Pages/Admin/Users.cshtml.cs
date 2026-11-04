@@ -115,11 +115,12 @@ public class UsersModel : PageModel
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return NotFound();
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var result = await _userManager.ResetPasswordAsync(user, token, "Reset@123456");
+        var newPassword = $"R{Guid.NewGuid():N}a1!";
+        var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
         if (result.Succeeded)
         {
             await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "PasswordReset", "ApplicationUser", userId, user.Email);
-            TempData["Success"] = "Пароль сброшен на: Reset@123456";
+            TempData["Success"] = $"Новый пароль (показывается один раз): {newPassword}";
         }
         else
         {

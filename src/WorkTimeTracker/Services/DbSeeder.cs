@@ -13,6 +13,9 @@ public static class DbSeeder
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var db = services.GetRequiredService<ApplicationDbContext>();
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var environment = services.GetRequiredService<IHostEnvironment>();
+        var isDevelopment = environment.IsDevelopment();
 
         await db.Database.MigrateAsync();
 
@@ -56,9 +59,19 @@ public static class DbSeeder
         await db.SaveChangesAsync();
 
         // --- Администратор ---
-        const string adminEmail = "admin@worktime.local";
+        var adminEmail = configuration["SeedAdmin:Email"] ?? "admin@worktime.local";
         if (await userManager.FindByEmailAsync(adminEmail) is null)
         {
+            var adminPassword = configuration["SeedAdmin:Password"];
+            if (string.IsNullOrWhiteSpace(adminPassword))
+            {
+                if (!isDevelopment)
+                    throw new InvalidOperationException("Для первого запуска задайте SeedAdmin:Password (не короче 12 символов).");
+                adminPassword = "Admin@123456";
+            }
+            if (!isDevelopment && adminPassword.Length < 12)
+                throw new InvalidOperationException("Пароль первого администратора должен содержать не менее 12 символов.");
+
             var admin = new ApplicationUser
             {
                 UserName = adminEmail,
@@ -67,13 +80,17 @@ public static class DbSeeder
                 DisplayName = "Администратор",
                 IsActive = true,
             };
-            await userManager.CreateAsync(admin, "Admin@123456");
+            var result = await userManager.CreateAsync(admin, adminPassword);
+            if (!result.Succeeded)
+                throw new InvalidOperationException($"Не удалось создать администратора: {string.Join("; ", result.Errors.Select(e => e.Description))}");
             await userManager.AddToRoleAsync(admin, AppRoles.Admin);
         }
 
         // --- Сотрудники и учётные записи ---
         async Task EnsureUserAsync(string email, string fullName, string password, string role, Employee employee)
         {
+            if (!isDevelopment) return;
+
             var user = await userManager.FindByEmailAsync(email);
             if (user is null)
             {
