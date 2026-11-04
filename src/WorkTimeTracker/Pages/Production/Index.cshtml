@@ -1,0 +1,82 @@
+@page
+@model WorkTimeTracker.Pages.Production.IndexModel
+@using WorkTimeTracker.Models
+@{
+    ViewData["Title"] = "Табели всех участков";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h4 class="mb-0">Табели всех участков</h4>
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        <span>—</span>
+        <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        <button class="btn btn-sm btn-primary">Показать</button>
+    </form>
+</div>
+
+<div class="row g-3">
+    @foreach (var dept in Model.Departments)
+    {
+        var stats = Model.Stats(dept.Id);
+        <div class="col-md-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-header py-2 d-flex justify-content-between">
+                    <strong>@dept.Name</strong>
+                    <span class="badge bg-primary-subtle text-primary-emphasis">@stats.Hours.ToString("0.##") ч</span>
+                </div>
+                <div class="card-body py-2">
+                    <div class="small">
+                        На утверждении: <strong>@stats.Submitted</strong><br />
+                        Утверждено мастером: <strong>@stats.Approved</strong><br />
+                        Финально: <strong>@stats.Final</strong>
+                    </div>
+                </div>
+                <div class="card-footer py-2 bg-transparent border-0">
+                    <a class="btn btn-sm btn-outline-primary" href="/Production/Section?departmentId=@dept.Id&from=@Model.From.ToString("yyyy-MM-dd")&to=@Model.To.ToString("yyyy-MM-dd")">Открыть</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.TwoStageApproval)
+{
+    <h5 class="mt-4">Ожидают финального утверждения</h5>
+    var pending = Model.Days.Where(d => d.Status == TimeSheetStatus.Approved && !d.FinalApproved)
+        .OrderBy(d => d.Date).ToList();
+    if (!pending.Any())
+    {
+        <div class="alert alert-success py-2">Все табели финально утверждены.</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Сотрудник</th><th>Участок</th><th>Дата</th><th class="text-end">Часов</th><th>Утвердил</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in pending)
+                        {
+                            <tr>
+                                <td>@d.Employee?.FullName</td>
+                                <td>@d.Employee?.Department?.Name</td>
+                                <td>@d.Date.ToString("dd.MM.yyyy")</td>
+                                <td class="text-end">@d.WorkedHours.ToString("0.##")</td>
+                                <td>@d.ApprovedByName</td>
+                                <td class="text-end">
+                                    <form method="post" asp-page-handler="FinalApprove" class="d-inline">
+                                        <input type="hidden" name="dayId" value="@d.Id" />
+                                        <button class="btn btn-sm btn-success">Финально утвердить</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}

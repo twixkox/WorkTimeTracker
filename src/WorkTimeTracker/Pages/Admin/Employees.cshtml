@@ -1,0 +1,71 @@
+@page
+@model WorkTimeTracker.Pages.Admin.EmployeesModel
+@{
+    ViewData["Title"] = "Сотрудники";
+    var edit = Model.EditId is int id ? Model.Employees.FirstOrDefault(e => e.Id == id) : null;
+}
+
+<h4 class="mb-3">Сотрудники</h4>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><strong>@(edit is null ? "Новый сотрудник" : "Редактирование")</strong></div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Save">
+                    @if (edit is not null) { <input type="hidden" name="EditId" value="@edit.Id" /> }
+                    <div class="mb-2">
+                        <label class="form-label">ФИО</label>
+                        <input name="FullName" class="form-control" value="@(edit?.FullName ?? Model.FullName)" required />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Подразделение</label>
+                        <select name="DepartmentId" class="form-select" asp-items="Model.Departments"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Должность</label>
+                        <input name="Position" class="form-control" value="@(edit?.Position ?? Model.Position)" />
+                    </div>
+                    <button class="btn btn-primary">Сохранить</button>
+                    @if (edit is not null) { <a class="btn btn-outline-secondary" href="/Admin/Employees">Отмена</a> }
+                </form>
+            </div>
+        </div>
+        <div class="alert alert-info small mt-3">
+            Привязка сотрудника к учётной записи выполняется на странице
+            <a href="/Admin/Users">Пользователи и роли</a>.
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr><th>ФИО</th><th>Подразделение</th><th>Должность</th><th>Уч. запись</th><th>Активен</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in Model.Employees)
+                        {
+                            <tr class="@(e.IsActive ? "" : "table-secondary")">
+                                <td>@e.FullName</td>
+                                <td>@e.Department?.Name</td>
+                                <td>@e.Position</td>
+                                <td>@(e.UserId is null ? "—" : "привязана")</td>
+                                <td>@(e.IsActive ? "да" : "нет")</td>
+                                <td class="text-end text-nowrap">
+                                    <a class="btn btn-sm btn-outline-primary" href="?EditId=@e.Id">Изменить</a>
+                                    <form method="post" asp-page-handler="Toggle" class="d-inline">
+                                        <input type="hidden" name="id" value="@e.Id" />
+                                        <button class="btn btn-sm btn-outline-@(e.IsActive ? "danger" : "success")">
+                                            @(e.IsActive ? "Деактивировать" : "Активировать")
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

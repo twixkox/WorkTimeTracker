@@ -1,0 +1,89 @@
+@page
+@model WorkTimeTracker.Pages.Admin.ReportsModel
+@{
+    ViewData["Title"] = "Отчёты в Excel";
+    var now = DateTime.Today;
+    var monthStart = new DateOnly(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
+    var monthEnd = new DateOnly(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)).ToString("yyyy-MM-dd");
+}
+
+<h4 class="mb-3">Отчёты в Excel</h4>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><strong>Табель сотрудника за месяц</strong></div>
+            <div class="card-body">
+                <form method="get" asp-page-handler="EmployeeTimesheet" class="row g-2">
+                    <div class="col-12">
+                        <select name="employeeId" class="form-select" asp-items="Model.Employees" required></select>
+                    </div>
+                    <div class="col-6">
+                        <select name="year" class="form-select">
+                            @for (var y = now.Year; y >= now.Year - 3; y--)
+                            {
+                                <option value="@y" selected="@(y == now.Year)">@y</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <select name="month" class="form-select">
+                            @for (var m = 1; m <= 12; m++)
+                            {
+                                <option value="@m" selected="@(m == now.Month)">@System.Globalization.CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetMonthName(m)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Скачать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><strong>Сводка по катерам</strong></div>
+            <div class="card-body">
+                <form method="get" asp-page-handler="Boats" class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small mb-0">С</label>
+                        <input type="date" name="from" value="@monthStart" class="form-control" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small mb-0">По</label>
+                        <input type="date" name="to" value="@monthEnd" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <select name="departmentId" class="form-select" asp-items="Model.Departments">
+                            <option value="">Все подразделения</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Скачать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><strong>Загрузка сотрудников (все подразделения)</strong></div>
+            <div class="card-body">
+                <form method="get" asp-page-handler="Load" class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small mb-0">С</label>
+                        <input type="date" name="from" value="@monthStart" class="form-control" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small mb-0">По</label>
+                        <input type="date" name="to" value="@monthEnd" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Скачать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

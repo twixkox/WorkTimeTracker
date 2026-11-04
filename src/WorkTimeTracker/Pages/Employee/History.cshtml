@@ -1,0 +1,83 @@
+@page
+@model WorkTimeTracker.Pages.Employee.HistoryModel
+@{
+    ViewData["Title"] = "История табелей";
+    var prevMonth = Model.Month == 1 ? 12 : Model.Month - 1;
+    var prevYear = Model.Month == 1 ? Model.Year - 1 : Model.Year;
+    var nextMonth = Model.Month == 12 ? 1 : Model.Month + 1;
+    var nextYear = Model.Month == 12 ? Model.Year + 1 : Model.Year;
+}
+
+<h4 class="mb-3">История табелей</h4>
+
+@if (Model.Notifications.Any(n => !n.IsRead) || Model.Notifications.Any())
+{
+    <div class="card mb-3">
+        <div class="card-header py-2"><strong><i class="bi bi-bell"></i> Уведомления</strong></div>
+        <div class="list-group list-group-flush">
+            @foreach (var n in Model.Notifications)
+            {
+                <a class="list-group-item list-group-item-action @(n.IsRead ? "" : "list-group-item-primary")"
+                   href="@(n.Link ?? "#")">
+                    <div class="d-flex justify-content-between">
+                        <strong>@n.Title</strong>
+                        <small class="text-muted">@n.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                    </div>
+                    <div>@n.Message</div>
+                </a>
+            }
+        </div>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="mb-0">Табели за месяц</h6>
+    <div class="btn-group btn-group-sm">
+        <a class="btn btn-outline-primary" href="?year=@prevYear&month=@prevMonth"><i class="bi bi-chevron-left"></i></a>
+        <span class="btn btn-outline-primary disabled">@Model.Month.@Model.Year</span>
+        <a class="btn btn-outline-primary" href="?year=@nextYear&month=@nextMonth"><i class="bi bi-chevron-right"></i></a>
+    </div>
+</div>
+
+@if (!Model.Days.Any())
+{
+    <div class="alert alert-info">За выбранный месяц табелей нет.</div>
+}
+else
+{
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Дата</th>
+                        <th>Начало</th>
+                        <th>Окончание</th>
+                        <th class="text-end">Отработано</th>
+                        <th class="text-end">Затраты</th>
+                        <th>Статус</th>
+                        <th>Комментарий</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model.Days)
+                    {
+                        <tr>
+                            <td>@d.Date.ToString("dd.MM.yyyy")</td>
+                            <td>@d.StartTime.ToString("HH:mm")</td>
+                            <td>@d.EndTime.ToString("HH:mm")</td>
+                            <td class="text-end">@d.WorkedHours.ToString("0.##")</td>
+                            <td class="text-end">@d.EntriesHours.ToString("0.##")</td>
+                            <td>@Html.Raw(ViewHelpers.StatusBadge(d.Status))</td>
+                            <td class="small text-danger">@d.RejectComment</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary" href="/Employee/Day?date=@d.Date.ToString("yyyy-MM-dd")&returnUrl=/Employee/History">Открыть</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

@@ -1,0 +1,71 @@
+@page
+@model WorkTimeTracker.Pages.Employee.DayModel
+@{
+    ViewData["Title"] = $"Табель за {Model.Input.Date:dd.MM.yyyy}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        Табель за @Model.Input.Date.ToString("dddd, dd MMMM yyyy", System.Globalization.CultureInfo.GetCultureInfo("ru-RU"))
+    </h4>
+    <div class="d-flex gap-2 align-items-center">
+        @if (Model.Day is not null)
+        {
+            @Html.Raw(ViewHelpers.StatusBadge(Model.Day.Status))
+            @if (Model.Day.Status == WorkTimeTracker.Models.TimeSheetStatus.Approved && Model.Day.FinalApproved)
+            {
+                <span class="badge bg-success-subtle text-success-emphasis status-badge">Финально</span>
+            }
+        }
+        @if (Model.ShowWeekLink)
+        {
+            var weekStart = Model.Input.Date.AddDays(-((int)Model.Input.Date.DayOfWeek + 6) % 7);
+            <a class="btn btn-sm btn-outline-secondary no-print" href="/Employee/Week?week=@weekStart.ToString("yyyy-MM-dd")">Неделя</a>
+        }
+        <a class="btn btn-sm btn-outline-secondary no-print" href="@Model.Input.ReturnUrl">Календарь</a>
+    </div>
+</div>
+
+@if (Model.Day?.Status == WorkTimeTracker.Models.TimeSheetStatus.Rejected && !string.IsNullOrEmpty(Model.Day.RejectComment))
+{
+    <div class="alert alert-danger">
+        <strong>Отклонено мастером.</strong> @Model.Day.RejectComment
+    </div>
+}
+else if (Model.Day?.Status == WorkTimeTracker.Models.TimeSheetStatus.Approved)
+{
+    <div class="alert alert-success">
+        Табель утверждён @Model.Day.ApprovedByName @(Model.Day.ApprovedAt?.ToString("dd.MM.yyyy HH:mm")).
+    </div>
+}
+else if (Model.Day?.Status == WorkTimeTracker.Models.TimeSheetStatus.Submitted)
+{
+    <div class="alert alert-warning">Табель на утверждении у мастера участка.</div>
+}
+
+@if (Model.Issues.Count > 0)
+{
+    <div class="alert alert-danger">
+        <strong>Проверьте данные:</strong>
+        <ul class="mb-0">
+            @foreach (var issue in Model.Issues)
+            {
+                <li>@issue.Message</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            <partial name="_DayForm" model="new DayFormPartialModel {
+                Day = Model.Input,
+                Boats = Model.Boats,
+                WorkTypes = Model.WorkTypes,
+                CanEdit = Model.CanEdit,
+                ExistingDay = Model.Day,
+                ShowActions = true }" />
+        </form>
+    </div>
+</div>

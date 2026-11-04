@@ -1,0 +1,93 @@
+@page
+@model WorkTimeTracker.Pages.Master.SummaryModel
+@{
+    ViewData["Title"] = $"Сводка участка «{Model.Department?.Name}»";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h4 class="mb-0">Сводка: участок «@Model.Department?.Name»</h4>
+    <form method="get" class="d-flex gap-2 align-items-center no-print">
+        <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        <span>—</span>
+        <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        <button class="btn btn-sm btn-primary">Показать</button>
+        <a class="btn btn-sm btn-outline-success" href="?handler=Export&from=@Model.From.ToString("yyyy-MM-dd")&to=@Model.To.ToString("yyyy-MM-dd")">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">Трудозатраты по катерам</div>
+            <div class="fs-4 fw-semibold">@Model.Boats.Sum(b => b.Hours).ToString("0.##") ч</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">Внутрицеховые работы</div>
+            <div class="fs-4 fw-semibold">@Model.Inhouse.Hours.ToString("0.##") ч <span class="fs-6 text-muted">(@Model.Inhouse.Count записей)</span></div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">Отработано всего</div>
+            <div class="fs-4 fw-semibold">@Model.Load.Sum(l => l.WorkedHours).ToString("0.##") ч</div>
+        </div></div>
+    </div>
+</div>
+
+<h6>Трудозатраты по катерам</h6>
+<div class="card mb-3">
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr><th>№ катера</th><th>Название</th><th>Заказчик</th><th class="text-end">Часы</th><th class="text-end">Записей</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var b in Model.Boats)
+                {
+                    <tr>
+                        <td>@b.BoatNumber</td>
+                        <td>@b.BoatName</td>
+                        <td>@b.Customer</td>
+                        <td class="text-end">@b.Hours.ToString("0.##")</td>
+                        <td class="text-end">@b.EntriesCount</td>
+                    </tr>
+                }
+                @if (!Model.Boats.Any())
+                {
+                    <tr><td colspan="5" class="text-muted text-center py-3">Нет данных за период</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<h6>Загрузка сотрудников</h6>
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Сотрудник</th><th class="text-end">Отработано, ч</th><th class="text-end">По катерам, ч</th>
+                    <th class="text-end">Внутрицеховые, ч</th><th class="text-center">Дней заполнено</th><th class="text-center">Утверждено</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model.Load)
+                {
+                    <tr>
+                        <td>@e.FullName</td>
+                        <td class="text-end">@e.WorkedHours.ToString("0.##")</td>
+                        <td class="text-end">@e.BoatHours.ToString("0.##")</td>
+                        <td class="text-end">@e.InhouseHours.ToString("0.##")</td>
+                        <td class="text-center">@e.DaysFilled</td>
+                        <td class="text-center">@e.DaysApproved</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

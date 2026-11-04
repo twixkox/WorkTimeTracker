@@ -1,0 +1,73 @@
+@page
+@model WorkTimeTracker.Pages.Admin.UsersModel
+@{
+    ViewData["Title"] = "Пользователи и роли";
+}
+
+<h4 class="mb-3">Пользователи и роли</h4>
+
+<p>
+    <a class="btn btn-primary" href="/Identity/Account/Register"><i class="bi bi-person-plus"></i> Создать пользователя</a>
+    <a class="btn btn-outline-secondary" href="/Admin/Employees">Карточки сотрудников</a>
+</p>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Email</th><th>ФИО</th><th>Роль</th><th>Сотрудник</th><th>Активен</th><th style="width: 22rem;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (user, roles, employeeId, employeeName) in Model.Users)
+                {
+                    <tr class="@(user.IsActive ? "" : "table-secondary")">
+                        <td>@user.Email</td>
+                        <td>@user.DisplayName</td>
+                        <td>
+                            <form method="post" asp-page-handler="SetRole" class="d-flex gap-1">
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <select name="role" class="form-select form-select-sm" style="width: 11rem;">
+                                    @foreach (var r in AppRoles.All)
+                                    {
+                                        <option value="@r" selected="@(roles.FirstOrDefault() == r)">@r</option>
+                                    }
+                                </select>
+                                <button class="btn btn-sm btn-outline-primary">OK</button>
+                            </form>
+                        </td>
+                        <td>
+                            @if (employeeId is not null)
+                            {
+                                <span>@employeeName</span>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="BindEmployee" class="d-flex gap-1">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <select name="employeeId" class="form-select form-select-sm" style="width: 12rem;" asp-items="Model.Employees"></select>
+                                    <button class="btn btn-sm btn-outline-primary" title="Привязать">↔</button>
+                                </form>
+                            }
+                        </td>
+                        <td>@(user.IsActive ? "да" : "нет")</td>
+                        <td class="text-end text-nowrap">
+                            <form method="post" asp-page-handler="ResetPassword" class="d-inline">
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <button class="btn btn-sm btn-outline-secondary">Сброс пароля</button>
+                            </form>
+                            <form method="post" asp-page-handler="ToggleActive" class="d-inline">
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <button class="btn btn-sm btn-outline-@(user.IsActive ? "danger" : "success")">
+                                    @(user.IsActive ? "Деактивировать" : "Активировать")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<p class="small text-muted mt-2">Сброс пароля устанавливает временный пароль <code>Reset@123456</code> — передайте его пользователю.</p>

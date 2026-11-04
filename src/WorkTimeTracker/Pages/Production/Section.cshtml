@@ -1,0 +1,67 @@
+@page
+@model WorkTimeTracker.Pages.Production.SectionModel
+@using WorkTimeTracker.Models
+@{
+    ViewData["Title"] = $"Участок «{Model.Department?.Name}»";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h4 class="mb-0">Участок «@Model.Department?.Name»</h4>
+    <form method="get" class="d-flex gap-2 align-items-center">
+        <input type="hidden" name="departmentId" value="@Model.Department?.Id" />
+        <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        <span>—</span>
+        <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        <button class="btn btn-sm btn-primary">Показать</button>
+        <a class="btn btn-sm btn-outline-success" href="?handler=Export&departmentId=@Model.Department?.Id&from=@Model.From.ToString("yyyy-MM-dd")&to=@Model.To.ToString("yyyy-MM-dd")">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+        </a>
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="min-width:12rem;">Сотрудник</th>
+                    <th class="text-center">Дней</th>
+                    <th class="text-end">Часов</th>
+                    @foreach (var d in Enumerable.Range(0, (Model.To.DayNumber - Model.From.DayNumber) + 1 > 14 ? 0 : (Model.To.DayNumber - Model.From.DayNumber) + 1))
+                    {
+                        <th class="text-center">@Model.From.AddDays(d).ToString("dd.MM")</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (employee, days) in Model.Rows)
+                {
+                    <tr>
+                        <td>@employee.FullName</td>
+                        <td class="text-center">@days.Count</td>
+                        <td class="text-end">@Math.Round(days.Sum(d => d.WorkedHours), 2).ToString("0.##")</td>
+                        @if ((Model.To.DayNumber - Model.From.DayNumber) + 1 <= 14)
+                        {
+                            for (var i = 0; i <= Model.To.DayNumber - Model.From.DayNumber; i++)
+                            {
+                                var date = Model.From.AddDays(i);
+                                var day = days.FirstOrDefault(x => x.Date == date);
+                                <td class="text-center">
+                                    @if (day is not null)
+                                    {
+                                        <a href="/Master/Day?employeeId=@employee.Id&date=@date.ToString("yyyy-MM-dd")">@Html.Raw(ViewHelpers.StatusBadge(day.Status))</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">·</span>
+                                    }
+                                </td>
+                            }
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<p class="small text-muted mt-2"><a href="/Production/Index">← Ко всем участкам</a></p>

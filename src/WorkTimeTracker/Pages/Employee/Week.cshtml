@@ -1,0 +1,58 @@
+@page
+@model WorkTimeTracker.Pages.Employee.WeekModel
+@using WorkTimeTracker.Models
+@{
+    ViewData["Title"] = $"Учёт затрат за неделю {Model.WeekStart:dd.MM.yyyy}";
+    var prevWeek = Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd");
+    var nextWeek = Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd");
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="mb-0">Учёт затрат по дням недели</h4>
+        <div class="text-muted">@Model.Employee?.FullName · @Model.Employee?.Department?.Name</div>
+    </div>
+    <div class="btn-group">
+        <a class="btn btn-outline-primary" href="?week=@prevWeek"><i class="bi bi-chevron-left"></i></a>
+        <span class="btn btn-outline-primary disabled">@Model.WeekStart.ToString("dd.MM") — @Model.WeekStart.AddDays(6).ToString("dd.MM.yyyy")</span>
+        <a class="btn btn-outline-primary" href="?week=@nextWeek"><i class="bi bi-chevron-right"></i></a>
+    </div>
+</div>
+
+@foreach (var day in Model.Days)
+{
+    var existing = Model.Existing.GetValueOrDefault(day.Date);
+    var editable = Model.CanEdit(day.Date);
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <strong>@day.Date.ToString("dddd, dd MMMM", System.Globalization.CultureInfo.GetCultureInfo("ru-RU"))</strong>
+            <div>
+                @if (existing is not null)
+                {
+                    @Html.Raw(ViewHelpers.StatusBadge(existing.Status))
+                }
+                else
+                {
+                    <span class="badge bg-light text-dark status-badge">Не заполнен</span>
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            @if (!editable)
+            {
+                <div class="alert alert-warning py-1 small mb-2">
+                    @(existing?.Status == TimeSheetStatus.Submitted ? "На утверждении у мастера — редактирование недоступно." : "Табель утверждён.")
+                </div>
+            }
+            <form method="post" action="/Employee/Day?date=@day.Date.ToString("yyyy-MM-dd")">
+                <partial name="_DayForm" model="new DayFormPartialModel {
+                    Day = day,
+                    Boats = Model.Boats,
+                    WorkTypes = Model.WorkTypes,
+                    CanEdit = editable,
+                    ExistingDay = existing,
+                    ShowActions = editable }" />
+            </form>
+        </div>
+    </div>
+}

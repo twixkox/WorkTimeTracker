@@ -1,0 +1,104 @@
+@page
+@model WorkTimeTracker.Pages.Master.DayModel
+@using WorkTimeTracker.Models
+@{
+    ViewData["Title"] = $"Табель: {Model.Employee?.FullName}, {Model.Input.Date:dd.MM.yyyy}";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="mb-0">@Model.Employee?.FullName</h4>
+        <div class="text-muted">@Model.Employee?.Department?.Name · @Model.Input.Date.ToString("dd.MM.yyyy")</div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        @if (Model.Day?.Id > 0)
+        {
+            @Html.Raw(ViewHelpers.StatusBadge(Model.Day.Status))
+        }
+        else
+        {
+            <span class="badge bg-light text-dark status-badge">Не заполнен</span>
+        }
+        <a class="btn btn-sm btn-outline-secondary no-print" href="/Master/Index">К списку</a>
+        <button class="btn btn-sm btn-outline-secondary no-print" onclick="window.print()"><i class="bi bi-printer"></i> Печать</button>
+    </div>
+</div>
+
+@if (Model.Issues.Count > 0)
+{
+    <div class="alert alert-danger">
+        <ul class="mb-0">@foreach (var i in Model.Issues) { <li>@i.Message</li> }</ul>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="post">
+            <partial name="/Pages/Employee/_DayForm.cshtml" model="new Pages.Employee.DayFormPartialModel {
+                Day = Model.Input,
+                Boats = Model.Boats,
+                WorkTypes = Model.WorkTypes,
+                CanEdit = Model.CanEdit,
+                ExistingDay = Model.Day,
+                ShowActions = false }" />
+            @if (Model.CanEdit && Model.Day?.Id > 0)
+            {
+                <button type="submit" formaction="?handler=Save" class="btn btn-primary mt-3 no-print">
+                    <i class="bi bi-save"></i> Сохранить изменения (с записью в аудит)
+                </button>
+            }
+        </form>
+    </div>
+</div>
+
+@if (Model.Day?.Id > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header py-2"><strong>Проверка</strong></div>
+        <div class="card-body py-2">
+            <div class="row small">
+                <div class="col-md-3">Отработано: <strong>@Model.Day.WorkedHours.ToString("0.##") ч</strong></div>
+                <div class="col-md-3">Сумма затрат: <strong class="@(Model.Day.EntriesHours > Model.Day.WorkedHours ? "text-danger" : "text-success")">@Model.Day.EntriesHours.ToString("0.##") ч</strong></div>
+                <div class="col-md-3">По катерам: <strong>@Model.Day.TimeEntries.Where(t => !t.IsInhouse).Sum(t => t.Hours).ToString("0.##") ч</strong></div>
+                <div class="col-md-3">Внутрицеховые: <strong>@Model.Day.TimeEntries.Where(t => t.IsInhouse).Sum(t => t.Hours).ToString("0.##") ч</strong></div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Day.Status == TimeSheetStatus.Submitted)
+    {
+        <div class="row g-3 no-print">
+            <div class="col-lg-6">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <form method="post" asp-page-handler="Approve">
+                            <button class="btn btn-success"><i class="bi bi-check-lg"></i> Утвердить табель</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-danger">
+                    <div class="card-body">
+                        <form method="post" asp-page-handler="Reject">
+                            <label class="form-label">Причина отклонения (обязательно):</label>
+                            <textarea name="RejectComment" class="form-control mb-2" rows="2"></textarea>
+                            <button class="btn btn-danger"><i class="bi bi-x-lg"></i> Отклонить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.Day.Status == TimeSheetStatus.Rejected && !string.IsNullOrEmpty(Model.Day.RejectComment))
+    {
+        <div class="alert alert-danger">Отклонён: @Model.Day.RejectComment</div>
+    }
+    else if (Model.Day.Status == TimeSheetStatus.Approved)
+    {
+        <div class="alert alert-success">
+            Утверждён @Model.Day.ApprovedByName @Model.Day.ApprovedAt?.ToString("dd.MM.yyyy HH:mm")
+            @(Model.Day.FinalApproved ? "· финально (начальник производства)" : "")
+        </div>
+    }
+}

@@ -1,0 +1,88 @@
+@page
+@model WorkTimeTracker.Pages.Employee.IndexModel
+@using WorkTimeTracker.Models
+@using System.Globalization
+@{
+    ViewData["Title"] = "Мой табель";
+}
+
+@if (Model.Employee is not null)
+{
+    var prevMonth = Model.Month == 1 ? 12 : Model.Month - 1;
+    var prevYear = Model.Month == 1 ? Model.Year - 1 : Model.Year;
+    var nextMonth = Model.Month == 12 ? 1 : Model.Month + 1;
+    var nextYear = Model.Month == 12 ? Model.Year + 1 : Model.Year;
+    var monthName = CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetMonthName(Model.Month);
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h4 class="mb-0">@Model.Employee.FullName</h4>
+            <div class="text-muted">@Model.Employee.Department?.Name</div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="h5 mb-0">Сумма часов за месяц: <span class="badge bg-primary">@Model.MonthHours.ToString("0.##") ч</span></div>
+            <div class="btn-group no-print">
+                <a class="btn btn-outline-primary" href="?year=@prevYear&month=@prevMonth"><i class="bi bi-chevron-left"></i></a>
+                <span class="btn btn-outline-primary disabled">@monthName @Model.Year</span>
+                <a class="btn btn-outline-primary" href="?year=@nextYear&month=@nextMonth"><i class="bi bi-chevron-right"></i></a>
+            </div>
+            <a class="btn btn-primary" href="@Model.DayUrl(Model.Employee, DateOnly.FromDateTime(DateTime.Today))">
+                <i class="bi bi-plus-lg"></i> Сегодня
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-2">
+            <div class="row text-center fw-semibold text-muted small mb-1">
+                @foreach (var d in new[] { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс" })
+                {
+                    <div class="col">@d</div>
+                }
+            </div>
+            @{
+                var cells = Model.FirstDayOffset + Model.DaysInMonth;
+                var rows = (int)Math.Ceiling(cells / 7.0);
+            }
+            @for (var r = 0; r < rows; r++)
+            {
+                <div class="row">
+                    @for (var c = 0; c < 7; c++)
+                    {
+                        var dayNum = r * 7 + c - Model.FirstDayOffset + 1;
+                        if (dayNum < 1 || dayNum > Model.DaysInMonth)
+                        {
+                            <div class="col calendar-day border bg-light opacity-50"></div>
+                        }
+                        else
+                        {
+                            var date = new DateOnly(Model.Year, Model.Month, dayNum);
+                            var day = Model.DayAt(dayNum);
+                            var isToday = date == DateOnly.FromDateTime(DateTime.Today);
+                            <a class="col calendar-day border text-decoration-none text-dark @(isToday ? "bg-info-subtle" : "bg-white")"
+                               href="@Model.DayUrl(Model.Employee, date)">
+                                <div class="fw-semibold">@dayNum</div>
+                                @if (day is not null)
+                                {
+                                    @Html.Raw(ViewHelpers.StatusBadge(day.Status))
+                                    <div class="small text-muted mt-1">@day.WorkedHours.ToString("0.##") ч</div>
+                                    @if (day.Status == TimeSheetStatus.Rejected && !string.IsNullOrEmpty(day.RejectComment))
+                                    {
+                                        <div class="small text-danger"><i class="bi bi-exclamation-circle"></i> @day.RejectComment</div>
+                                    }
+                                }
+                            </a>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="mt-3 small text-muted">
+        <span class="me-3"><span class="badge bg-secondary">Черновик</span> — редактируется</span>
+        <span class="me-3"><span class="badge bg-warning text-dark">На утверждении</span> — ожидает мастера</span>
+        <span class="me-3"><span class="badge bg-success">Утверждён</span></span>
+        <span><span class="badge bg-danger">Отклонён</span> — смотрите комментарий</span>
+    </div>
+}

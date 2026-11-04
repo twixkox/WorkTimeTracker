@@ -1,0 +1,57 @@
+body {
+    background: #f5f7fa;
+}
+
+.card {
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    border: none;
+}
+
+/* Календарь */
+.calendar-day {
+    min-height: 86px;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.calendar-day:hover {
+    background: #e7f0ff;
+}
+
+.calendar-day .badge-status {
+    font-size: .68rem;
+}
+
+/* Статусы табеля */
+.status-badge {
+    font-size: .75rem;
+}
+
+/* Подсветка строки при превышении суммы затрат */
+.table-overtime tr.entries-row td {
+    background: #fff5f5;
+}
+
+.hours-sum-invalid {
+    color: #c92a2a;
+    font-weight: 600;
+}
+
+.hours-sum-valid {
+    color: #2b8a3e;
+    font-weight: 600;
+}
+
+/* Печатная форма */
+@media print {
+    nav, footer, .no-print, .btn {
+        display: none !important;
+    }
+    main.container {
+        max-width: 100%;
+    }
+    .card {
+        box-shadow: none;
+        border: 1px solid #999;
+    }
+}
