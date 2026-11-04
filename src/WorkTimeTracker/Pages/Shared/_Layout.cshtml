@@ -39,7 +39,7 @@
                 @if (user?.Identity?.IsAuthenticated == true)
                 {
                     <ul class="navbar-nav me-auto">
-                        @if (user.IsInRole(AppRoles.Employee) && !user.IsInRole(AppRoles.Admin))
+                        @if ((user.IsInRole(AppRoles.Employee) || user.IsInRole(AppRoles.SectionMaster)) && !user.IsInRole(AppRoles.Admin))
                         {
                             <li class="nav-item"><a class="nav-link" href="/Employee/Index">Мой табель</a></li>
                             <li class="nav-item"><a class="nav-link" href="/Employee/History">История</a></li>
@@ -49,9 +49,12 @@
                             <li class="nav-item"><a class="nav-link" href="/Master/Index">Табели участка</a></li>
                             <li class="nav-item"><a class="nav-link" href="/Master/Summary">Сводка</a></li>
                         }
-                        @if (user.IsInRole(AppRoles.ProductionHead))
+                        @if (user.IsInRole(AppRoles.ProductionHead) || user.IsInRole(AppRoles.Admin))
                         {
                             <li class="nav-item"><a class="nav-link" href="/Production/Index">Табели</a></li>
+                        }
+                        @if (user.IsInRole(AppRoles.ProductionHead))
+                        {
                             <li class="nav-item"><a class="nav-link" href="/Production/Dashboard">Дашборд</a></li>
                         }
                         @if (user.IsInRole(AppRoles.Admin))

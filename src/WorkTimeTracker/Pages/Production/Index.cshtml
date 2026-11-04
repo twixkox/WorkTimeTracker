@@ -40,6 +40,48 @@
     }
 </div>
 
+<h5 class="mt-4">Ожидают утверждения</h5>
+@{
+    var submitted = Model.Days.Where(d => d.Status == TimeSheetStatus.Submitted)
+        .OrderBy(d => d.Date).ThenBy(d => d.Employee?.FullName).ToList();
+}
+@if (!submitted.Any())
+{
+    <div class="alert alert-success py-2">Нет табелей, ожидающих утверждения.</div>
+}
+else
+{
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>Сотрудник</th><th>Подразделение</th><th>Дата</th><th class="text-end">Часов</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in submitted)
+                    {
+                        <tr>
+                            <td>@d.Employee?.FullName</td>
+                            <td>@d.Employee?.Department?.Name</td>
+                            <td>@d.Date.ToString("dd.MM.yyyy")</td>
+                            <td class="text-end">@d.WorkedHours.ToString("0.##")</td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-sm btn-outline-primary" href="/Master/Day?employeeId=@d.EmployeeId&date=@d.Date.ToString("yyyy-MM-dd")">Открыть</a>
+                                <form method="post" asp-page-handler="Approve" class="d-inline">
+                                    <input type="hidden" name="dayId" value="@d.Id" />
+                                    <input type="hidden" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+                                    <input type="hidden" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+                                    <button class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Утвердить</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
 @if (Model.TwoStageApproval)
 {
     <h5 class="mt-4">Ожидают финального утверждения</h5>
@@ -69,6 +111,8 @@
                                 <td class="text-end">
                                     <form method="post" asp-page-handler="FinalApprove" class="d-inline">
                                         <input type="hidden" name="dayId" value="@d.Id" />
+                                        <input type="hidden" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+                                        <input type="hidden" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
                                         <button class="btn btn-sm btn-success">Финально утвердить</button>
                                     </form>
                                 </td>

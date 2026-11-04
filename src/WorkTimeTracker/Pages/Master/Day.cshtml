@@ -3,6 +3,7 @@
 @using WorkTimeTracker.Models
 @{
     ViewData["Title"] = $"Табель: {Model.Employee?.FullName}, {Model.Input.Date:dd.MM.yyyy}";
+    var backUrl = User.IsInRole(AppRoles.SectionMaster) ? "/Master/Index" : "/Production/Index";
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -19,7 +20,7 @@
         {
             <span class="badge bg-light text-dark status-badge">Не заполнен</span>
         }
-        <a class="btn btn-sm btn-outline-secondary no-print" href="/Master/Index">К списку</a>
+        <a class="btn btn-sm btn-outline-secondary no-print" href="@backUrl">К списку</a>
         <button class="btn btn-sm btn-outline-secondary no-print" onclick="window.print()"><i class="bi bi-printer"></i> Печать</button>
     </div>
 </div>

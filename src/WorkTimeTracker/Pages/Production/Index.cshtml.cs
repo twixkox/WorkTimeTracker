@@ -15,15 +15,17 @@ public class IndexModel : PageModel
     private readonly SettingsService _settings;
     private readonly AuditService _audit;
     private readonly CurrentUserService _currentUser;
+    private readonly NotificationService _notifications;
 
     public IndexModel(ApplicationDbContext db, ReportService reports, SettingsService settings,
-        AuditService audit, CurrentUserService currentUser)
+        AuditService audit, CurrentUserService currentUser, NotificationService notifications)
     {
         _db = db;
         _reports = reports;
         _settings = settings;
         _audit = audit;
         _currentUser = currentUser;
+        _notifications = notifications;
     }
 
     public DateOnly From { get; private set; }
@@ -48,21 +50,41 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostFinalApproveAsync(int dayId)
+    public async Task<IActionResult> OnPostApproveAsync(int dayId, DateOnly? from, DateOnly? to)
+    {
+        var day = await _db.WorkDays.Include(w => w.Employee).FirstOrDefaultAsync(w => w.Id == dayId);
+        if (day is null) return NotFound();
+        if (!WorkflowService.TryApprove(day, _currentUser.UserId ?? "", _currentUser.UserName, final: false))
+        {
+            TempData["Error"] = "Утвердить можно только табель со статусом «На утверждении».";
+            return RedirectToReview(from, to);
+        }
+
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Approved", "WorkDay", day.Id.ToString(),
+            $"{day.Employee?.FullName}, {day.Date:dd.MM.yyyy}");
+        if (day.Employee?.UserId is not null)
+            await _notifications.NotifyAsync(day.Employee.UserId, "Табель утверждён",
+                $"Ваш табель за {day.Date:dd.MM.yyyy} утверждён.", "/Employee/History");
+        TempData["Success"] = "Табель утверждён.";
+        return RedirectToReview(from, to);
+    }
+
+    public async Task<IActionResult> OnPostFinalApproveAsync(int dayId, DateOnly? from, DateOnly? to)
     {
         var day = await _db.WorkDays.Include(w => w.Employee).FirstOrDefaultAsync(w => w.Id == dayId);
         if (day is null) return NotFound();
         if (day.Status != TimeSheetStatus.Approved)
         {
             TempData["Error"] = "Финально можно утверждать только утверждённые мастером табели.";
-            return RedirectToPage(new { from = From, to = To });
+            return RedirectToReview(from, to);
         }
         day.FinalApproved = true;
         await _db.SaveChangesAsync();
         await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "FinalApproved", "WorkDay", day.Id.ToString(),
             $"{day.Employee?.FullName}, {day.Date:dd.MM.yyyy}");
         TempData["Success"] = "Табель финально утверждён.";
-        return RedirectToPage(new { from = From, to = To });
+        return RedirectToReview(from, to);
     }
 
     public (int Submitted, int Approved, int Final, decimal Hours) Stats(int departmentId)
@@ -74,4 +96,7 @@ public class IndexModel : PageModel
             days.Count(d => d.FinalApproved),
             Math.Round(days.Sum(d => d.WorkedHours), 2));
     }
+
+    private IActionResult RedirectToReview(DateOnly? from, DateOnly? to)
+        => RedirectToPage(new { from = from?.ToString("yyyy-MM-dd"), to = to?.ToString("yyyy-MM-dd") });
 }
