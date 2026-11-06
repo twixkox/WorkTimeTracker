@@ -50,6 +50,33 @@ public class TimeCalculationServiceTests
     }
 
     [Fact]
+    public void Validate_SumBelowWorked_IsErrorOnSubmitButAllowedInDraft()
+    {
+        var entries = new List<TimeEntry> { Entry(1m) };
+        var start = new TimeOnly(9, 0);
+        var end = new TimeOnly(18, 0);
+
+        var submitted = TimeCalculationService.Validate(start, end, entries, ValidationSettings.Defaults, strict: true);
+        var draft = TimeCalculationService.Validate(start, end, entries, ValidationSettings.Defaults, strict: false);
+
+        Assert.Contains(submitted.Issues, i => i.Code == "sum-incomplete" && i.Severity == ValidationSeverity.Error);
+        Assert.False(draft.HasErrors);
+    }
+
+    [Fact]
+    public void FiveMinutes_IsZeroPointZeroEightHours_AndCanBeSubmitted()
+    {
+        var fiveMinutes = Math.Round(5m / 60m, 2);
+        var entries = new List<TimeEntry> { Entry(fiveMinutes) };
+
+        var result = TimeCalculationService.Validate(new TimeOnly(9, 0), new TimeOnly(10, 5), entries, ValidationSettings.Defaults, strict: true);
+
+        Assert.Equal(0.08m, fiveMinutes);
+        Assert.Equal(0.08m, TimeCalculationService.WorkedHours(new TimeOnly(9, 0), new TimeOnly(10, 5)));
+        Assert.False(result.HasErrors);
+    }
+
+    [Fact]
     public void Validate_EndBeforeStart_AlwaysError()
     {
         var result = TimeCalculationService.Validate(new TimeOnly(16, 0), new TimeOnly(8, 0), new List<TimeEntry>(), ValidationSettings.Defaults, strict: false);

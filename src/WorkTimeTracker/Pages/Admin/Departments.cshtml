@@ -62,6 +62,10 @@
                                             @(d.IsActive ? "Деактивировать" : "Активировать")
                                         </button>
                                     </form>
+                                    <form method="post" asp-page-handler="Delete" class="d-inline" onsubmit="return confirm('Удалить участок? Это возможно только при отсутствии работников.');">
+                                        <input type="hidden" name="id" value="@d.Id" />
+                                        <button class="btn btn-sm btn-outline-danger" title="Удалить участок"><i class="bi bi-trash"></i></button>
+                                    </form>
                                 </td>
                             </tr>
                         }

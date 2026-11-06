@@ -66,6 +66,23 @@ public class EmployeesModel : PageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    {
+        var employee = await _db.Employees.FindAsync(id);
+        if (employee is null) return NotFound();
+        if (employee.UserId is not null || await _db.WorkDays.AnyAsync(w => w.EmployeeId == id))
+        {
+            TempData["Error"] = "Нельзя удалить работника с табелями или привязанной учётной записью. Деактивируйте его, чтобы сохранить историю.";
+            return RedirectToPage();
+        }
+
+        _db.Employees.Remove(employee);
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Deleted", "Employee", id.ToString(), employee.FullName);
+        TempData["Success"] = $"Работник «{employee.FullName}» удалён.";
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostToggleAsync(int id)
     {
         var emp = await _db.Employees.FindAsync(id);

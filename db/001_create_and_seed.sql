@@ -32,8 +32,8 @@ SET IDENTITY_INSERT [dbo].[Departments] OFF;
 GO
 
 -- Катера
-INSERT INTO [dbo].[Boats] ([Number], [Name], [Customer], [IsActive])
-SELECT CAST(n AS nvarchar(10)), N'Катер ' + CAST(n AS nvarchar(10)), NULL, 1
+INSERT INTO [dbo].[Boats] ([Number], [Name], [TrailerNumber], [BoardNumber], [Customer], [IsActive])
+SELECT CAST(n AS nvarchar(10)), N'Катер ' + CAST(n AS nvarchar(10)), NULL, NULL, NULL, 1
 FROM (SELECT 1 n UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5
       UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10
       UNION ALL SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15

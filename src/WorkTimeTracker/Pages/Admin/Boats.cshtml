@@ -19,8 +19,16 @@
                         <input name="Number" class="form-control" value="@(edit?.Number ?? Model.Number)" required />
                     </div>
                     <div class="mb-2">
-                        <label class="form-label">Название</label>
+                        <label class="form-label">Название <span class="text-muted fw-normal">(необязательно)</span></label>
                         <input name="Name" class="form-control" value="@(edit?.Name ?? Model.Name)" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Номер прицепа <span class="text-muted fw-normal">(необязательно)</span></label>
+                        <input name="TrailerNumber" class="form-control" value="@(edit?.TrailerNumber ?? Model.TrailerNumber)" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Бортовой номер <span class="text-muted fw-normal">(необязательно)</span></label>
+                        <input name="BoardNumber" class="form-control" value="@(edit?.BoardNumber ?? Model.BoardNumber)" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Заказчик</label>
@@ -40,7 +48,7 @@
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
-                        <tr><th>Номер</th><th>Название</th><th>Заказчик</th><th>Активен</th><th></th></tr>
+                        <tr><th>Номер</th><th>Название</th><th>Прицеп</th><th>Бортовой №</th><th>Заказчик</th><th>Активен</th><th></th></tr>
                     </thead>
                     <tbody>
                         @foreach (var b in Model.Boats)
@@ -48,6 +56,8 @@
                             <tr class="@(b.IsActive ? "" : "table-secondary")">
                                 <td>@b.Number</td>
                                 <td>@b.Name</td>
+                                <td>@(b.TrailerNumber ?? "—")</td>
+                                <td>@(b.BoardNumber ?? "—")</td>
                                 <td>@b.Customer</td>
                                 <td>@(b.IsActive ? "да" : "нет")</td>
                                 <td class="text-end text-nowrap">

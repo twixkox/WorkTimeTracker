@@ -33,7 +33,7 @@ window.workTime = {
         if (!sumEl) return;
         sumEl.textContent = sum;
 
-        var invalid = sum > worked + 0.001;
+        var invalid = Math.abs(sum - worked) > 0.001;
         sumEl.classList.toggle('hours-sum-invalid', invalid);
         sumEl.classList.toggle('hours-sum-valid', !invalid && sum > 0);
         var table = container.querySelector('.entries-table');
@@ -86,7 +86,9 @@ window.workTime = {
             var index = tbody.querySelectorAll('tr.entries-row').length;
             var html = template.innerHTML.split('__i__').join(index);
             tbody.insertAdjacentHTML('beforeend', html);
-            bindRow(tbody.lastElementChild);
+            var newRow = tbody.lastElementChild;
+            newRow.classList.add('row-enter');
+            bindRow(newRow);
             recalc(container);
             return;
         }

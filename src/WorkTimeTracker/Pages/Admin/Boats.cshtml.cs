@@ -25,6 +25,8 @@ public class BoatsModel : PageModel
     [BindProperty(SupportsGet = true)] public int? EditId { get; set; }
     [BindProperty] public string Number { get; set; } = string.Empty;
     [BindProperty] public string? Name { get; set; }
+    [BindProperty] public string? TrailerNumber { get; set; }
+    [BindProperty] public string? BoardNumber { get; set; }
     [BindProperty] public string? Customer { get; set; }
 
     public async Task OnGet()
@@ -43,6 +45,8 @@ public class BoatsModel : PageModel
         {
             boat.Number = Number.Trim();
             boat.Name = Name;
+            boat.TrailerNumber = TrailerNumber;
+            boat.BoardNumber = BoardNumber;
             boat.Customer = Customer;
             await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Updated", "Boat", id.ToString(), Number);
         }
@@ -53,7 +57,14 @@ public class BoatsModel : PageModel
                 TempData["Error"] = $"Катер с номером «{Number.Trim()}» уже существует.";
                 return RedirectToPage();
             }
-            _db.Boats.Add(new Boat { Number = Number.Trim(), Name = Name, Customer = Customer });
+            _db.Boats.Add(new Boat
+            {
+                Number = Number.Trim(),
+                Name = Name,
+                TrailerNumber = TrailerNumber,
+                BoardNumber = BoardNumber,
+                Customer = Customer,
+            });
             await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Created", "Boat", null, Number);
         }
         await _db.SaveChangesAsync();

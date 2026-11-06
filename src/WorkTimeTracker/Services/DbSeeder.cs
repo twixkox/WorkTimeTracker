@@ -124,45 +124,65 @@ public static class DbSeeder
             return e;
         }
 
-        // Состав согласно заданию (ФИО демонстрационные, легко заменить через интерфейс администратора).
-        var assemblyNames = new[]
+        // По пять активных человек на участок, включая мастера и руководителя.
+        // Старые лишние демо-записи деактивируются, чтобы сохранить табели и учётные записи.
+        async Task EnsureWorkersAsync(Department dept, string position, string[] names, int firstUserNumber, int workersCount = 5)
+        {
+            for (var i = 0; i < names.Length; i++)
+            {
+                if (i < workersCount)
+                {
+                    var employee = await EnsureEmployeeAsync(names[i], dept, position);
+                    if (!employee.IsActive) employee.IsActive = true;
+                    await EnsureUserAsync($"worker{firstUserNumber + i}@worktime.local", names[i], "Worker@123456", AppRoles.Employee, employee);
+                }
+                else
+                {
+                    var legacy = await db.Employees.FirstOrDefaultAsync(e =>
+                        e.FullName == names[i] && e.DepartmentId == dept.Id && e.Position == position);
+                    if (legacy is not null) legacy.IsActive = false;
+                }
+            }
+            await db.SaveChangesAsync();
+        }
+
+        await EnsureWorkersAsync(assembly, "Сборщик", new[]
         {
             "Иванов А.А.", "Петров Б.Б.", "Сидоров В.В.", "Кузнецов Г.Г.", "Смирнов Д.Д.",
             "Попов Е.Е.", "Волков Ж.Ж.", "Соколов З.З.", "Лебедев И.И.", "Козлов К.К.",
             "Новиков Л.Л.", "Морозов М.М.", "Павлов Н.Н.", "Семёнов О.О.", "Голубев П.П.",
             "Виноградов Р.Р.", "Богданов С.С.",
-        };
-        var carpentryNames = new[] { "Степанов Т.Т.", "Егоров У.У.", "Орлов Ф.Ф.", "Захаров Х.Х." };
-        var sewingNames = new[] { "Андреев Ц.Ц.", "Макаров Ч.Ч.", "Николаев Ш.Ш.", "Захарченко Щ.Щ." };
-        var dept15Names = new[]
+        }, 1, workersCount: 3);
+        await EnsureWorkersAsync(carpentry, "Столяр", new[]
+        {
+            "Степанов Т.Т.", "Егоров У.У.", "Орлов Ф.Ф.", "Захаров Х.Х.", "Фролов Л.Л.",
+        }, 18, workersCount: 4);
+        await EnsureWorkersAsync(sewing, "Швея", new[]
+        {
+            "Андреев Ц.Ц.", "Макаров Ч.Ч.", "Николаев Ш.Ш.", "Захарченко Щ.Щ.", "Романова Е.Е.",
+        }, 23, workersCount: 4);
+        await EnsureWorkersAsync(dept15, "Рабочий", new[]
         {
             "Киселёв Ю.Ю.", "Титов Я.Я.", "Ковалёв Э.Э.", "Митин Ъ.Ъ.", "Денисов Ь.Ь.",
             "Громов А.Б.", "Фролов В.Г", "Жуков Г.Д.", "Матвеев Д.Е.", "Белов Е.Ж",
             "Комаров Ж.З", "Давыдов З.И.", "Мельников И.К.",
-        };
-
-        var password = "Worker@123456";
-        var idx = 1;
-        foreach (var name in assemblyNames)
+        }, 28, workersCount: 4);
+        await EnsureWorkersAsync(warehouse, "Кладовщик", new[]
         {
-            var e = await EnsureEmployeeAsync(name, assembly, "Сборщик");
-            await EnsureUserAsync($"worker{idx++}@worktime.local", name, password, AppRoles.Employee, e);
-        }
-        foreach (var name in carpentryNames)
+            "Васильев А.И.", "Фёдоров Б.И.", "Михайлов В.И.", "Ефремов Г.И.", "Дмитриев Д.И.",
+        }, 39);
+        await EnsureWorkersAsync(driver, "Водитель", new[]
         {
-            var e = await EnsureEmployeeAsync(name, carpentry, "Столяр");
-            await EnsureUserAsync($"worker{idx++}@worktime.local", name, password, AppRoles.Employee, e);
-        }
-        foreach (var name in sewingNames)
+            "Орлов А.В.", "Беляев Б.В.", "Тихонов В.В.", "Гусев Г.В.", "Куликов Д.В.",
+        }, 44);
+        await EnsureWorkersAsync(painting, "Маляр", new[]
         {
-            var e = await EnsureEmployeeAsync(name, sewing, "Швея");
-            await EnsureUserAsync($"worker{idx++}@worktime.local", name, password, AppRoles.Employee, e);
-        }
-        foreach (var name in dept15Names)
+            "Маркин А.С.", "Лазарев Б.С.", "Власов В.С.", "Королёв Г.С.", "Савин Д.С.",
+        }, 49);
+        await EnsureWorkersAsync(welding, "Сварщик", new[]
         {
-            var e = await EnsureEmployeeAsync(name, dept15, "Рабочий");
-            await EnsureUserAsync($"worker{idx++}@worktime.local", name, password, AppRoles.Employee, e);
-        }
+            "Карпов А.Н.", "Баранов Б.Н.", "Герасимов В.Н.", "Лебедев Г.Н.", "Терентьев Д.Н.",
+        }, 54);
 
         // Мастера участков и начальник производства
         async Task EnsureMasterAsync(string email, string fullName, Department dept)

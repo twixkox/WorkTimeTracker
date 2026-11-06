@@ -15,7 +15,7 @@
     var rawMonthName = CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetMonthName(Model.Month);
     var monthName = char.ToUpper(rawMonthName[0]) + rawMonthName[1..];
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div class="employee-calendar-header d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div>
             <h4 class="mb-0">@Model.Employee.FullName</h4>
             <div class="text-muted">@Model.Employee.Department?.Name</div>

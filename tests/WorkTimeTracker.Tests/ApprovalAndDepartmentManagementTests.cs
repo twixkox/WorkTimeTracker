@@ -149,6 +149,53 @@ public class ApprovalAndDepartmentManagementTests : IDisposable
         Assert.True(employee.IsActive);
     }
 
+    [Fact]
+    public void Index_RequiresAuthentication()
+    {
+        Assert.True(Attribute.IsDefined(typeof(Pages.IndexModel), typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute)));
+    }
+
+    [Fact]
+    public async Task DeleteDepartment_WithoutEmployees_RemovesDepartment()
+    {
+        var department = new Department { Name = "Пустой участок" };
+        _db.Departments.Add(department);
+        await _db.SaveChangesAsync();
+
+        await DepartmentsModel().OnPostDeleteAsync(department.Id);
+
+        Assert.False(await _db.Departments.AnyAsync());
+    }
+
+    [Fact]
+    public async Task DeleteDepartment_WithEmployees_PreservesDepartment()
+    {
+        var department = new Department { Name = "Сборка" };
+        _db.Employees.Add(new Employee { FullName = "Работник", Department = department });
+        await _db.SaveChangesAsync();
+
+        await DepartmentsModel().OnPostDeleteAsync(department.Id);
+
+        Assert.True(await _db.Departments.AnyAsync(d => d.Id == department.Id));
+    }
+
+    [Fact]
+    public async Task SaveBoat_StoresOptionalTrailerAndBoardNumbers()
+    {
+        var model = new BoatsModel(_db, new AuditService(_db), CurrentUser(AppRoles.Admin));
+        SetTempData(model);
+        model.Number = "RB-1";
+        model.TrailerNumber = "ПР-123";
+        model.BoardNumber = "Б-07";
+
+        await model.OnPostSaveAsync();
+
+        var boat = Assert.Single(_db.Boats);
+        Assert.Null(boat.Name);
+        Assert.Equal("ПР-123", boat.TrailerNumber);
+        Assert.Equal("Б-07", boat.BoardNumber);
+    }
+
     private CurrentUserService CurrentUser(string role)
     {
         var httpContext = new DefaultHttpContext

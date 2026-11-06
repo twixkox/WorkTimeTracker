@@ -15,7 +15,7 @@ namespace WorkTimeTracker.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.10");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.33");
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -299,6 +299,9 @@ namespace WorkTimeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("BoardNumber")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Customer")
                         .HasColumnType("TEXT");
 
@@ -310,6 +313,9 @@ namespace WorkTimeTracker.Migrations
 
                     b.Property<string>("Number")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TrailerNumber")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

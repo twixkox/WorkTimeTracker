@@ -92,6 +92,23 @@ public class DepartmentsModel : PageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    {
+        var department = await _db.Departments.FindAsync(id);
+        if (department is null) return NotFound();
+        if (await _db.Employees.AnyAsync(e => e.DepartmentId == id))
+        {
+            TempData["Error"] = "Нельзя удалить участок, в котором есть работники. Сначала переместите их или деактивируйте участок.";
+            return RedirectToPage();
+        }
+
+        _db.Departments.Remove(department);
+        await _db.SaveChangesAsync();
+        await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Deleted", "Department", id.ToString(), department.Name);
+        TempData["Success"] = $"Участок «{department.Name}» удалён.";
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostAddEmployeeAsync()
     {
         if (DepartmentId is not int departmentId) return NotFound();

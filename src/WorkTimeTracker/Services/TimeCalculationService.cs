@@ -48,6 +48,10 @@ public static class TimeCalculationService
             result.Add(severity, "sum-exceeds",
                 $"Сумма затрат {sum:0.##} ч превышает отработанное время {worked:0.##} ч.");
 
+        if (strict && sum < worked)
+            result.Add(ValidationSeverity.Error, "sum-incomplete",
+                $"Распределено {sum:0.##} ч из {worked:0.##} ч. Укажите все отработанное время.");
+
         if (entries.Any(e => e.Hours <= 0))
             result.Add(ValidationSeverity.Error, "hours-positive", "Время затрат должно быть больше нуля.");
 
