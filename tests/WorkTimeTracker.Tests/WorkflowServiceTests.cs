@@ -9,10 +9,11 @@ public class WorkflowServiceTests
     private static WorkDay Day(TimeSheetStatus status) => new() { Status = status };
 
     [Fact]
-    public void EmployeeCanEdit_OnlyDraftAndRejected()
+    public void EmployeeCanEdit_DraftRejectedAndRecorded()
     {
         Assert.True(WorkflowService.CanEmployeeEdit(TimeSheetStatus.Draft));
         Assert.True(WorkflowService.CanEmployeeEdit(TimeSheetStatus.Rejected));
+        Assert.True(WorkflowService.CanEmployeeEdit(TimeSheetStatus.Recorded));
         Assert.False(WorkflowService.CanEmployeeEdit(TimeSheetStatus.Submitted));
         Assert.False(WorkflowService.CanEmployeeEdit(TimeSheetStatus.Approved));
     }
@@ -43,10 +44,19 @@ public class WorkflowServiceTests
     }
 
     [Fact]
+    public void RecordedDay_CanBeSubmittedAfterRoleChange()
+    {
+        var day = Day(TimeSheetStatus.Recorded);
+        Assert.True(WorkflowService.CanEmployeeEdit(day.Status));
+        Assert.True(WorkflowService.TrySubmit(day));
+        Assert.Equal(TimeSheetStatus.Submitted, day.Status);
+    }
+
+    [Fact]
     public void Approve_FromSubmitted_SetsApproved()
     {
         var day = Day(TimeSheetStatus.Submitted);
-        Assert.True(WorkflowService.TryApprove(day, "user1", "Мастер", final: false));
+        Assert.True(WorkflowService.TryApprove(day, "user1", "Мастер"));
         Assert.Equal(TimeSheetStatus.Approved, day.Status);
         Assert.Equal("Мастер", day.ApprovedByName);
         Assert.False(day.FinalApproved);

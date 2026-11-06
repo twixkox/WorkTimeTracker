@@ -13,6 +13,7 @@ public static class ViewHelpers
             Models.TimeSheetStatus.Submitted => ("bg-warning text-dark", "На утверждении"),
             Models.TimeSheetStatus.Approved => ("bg-success", "Утверждён"),
             Models.TimeSheetStatus.Rejected => ("bg-danger", "Отклонён"),
+            Models.TimeSheetStatus.Recorded => ("bg-success-subtle text-success-emphasis", "Сохранено"),
             _ => ("bg-light text-dark", status.ToString()),
         };
         return new HtmlString($"<span class=\"badge status-badge {cls}\">{text}</span>");

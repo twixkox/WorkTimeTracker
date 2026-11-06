@@ -67,6 +67,11 @@ public class UsersModel : PageModel
 
     public async Task<IActionResult> OnPostSetRoleAsync(string userId, string role)
     {
+        if (!AppRoles.All.Contains(role))
+        {
+            TempData["Error"] = "Выберите одну роль из списка.";
+            return RedirectToPage();
+        }
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return NotFound();
         var current = await _userManager.GetRolesAsync(user);

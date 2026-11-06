@@ -55,7 +55,6 @@ MERGE [dbo].[SystemSettings] AS target
 USING (VALUES
     (N'MaxHoursPerDay',      N'16'),
     (N'OvertimeThreshold',   N'8'),
-    (N'TwoStageApproval',    N'false'),
     (N'ShiftStart',          N'09:00'),
     (N'ShiftEnd',            N'18:00'),
     (N'CheckIntervalOverlap',N'false')

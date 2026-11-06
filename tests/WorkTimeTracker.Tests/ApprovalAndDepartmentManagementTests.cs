@@ -41,8 +41,7 @@ public class ApprovalAndDepartmentManagementTests : IDisposable
         await _db.SaveChangesAsync();
 
         var currentUser = CurrentUser(role);
-        var model = new Pages.Production.IndexModel(_db, new ReportService(_db), new SettingsService(_db),
-            new AuditService(_db), currentUser, new NotificationService(_db));
+        var model = new Pages.Production.IndexModel(_db, new AuditService(_db), currentUser, new NotificationService(_db));
         SetTempData(model);
 
         await model.OnPostApproveAsync(day.Id, date, date);
@@ -53,6 +52,39 @@ public class ApprovalAndDepartmentManagementTests : IDisposable
         var notification = Assert.Single(_db.Notifications);
         Assert.Equal("employee-user", notification.UserId);
         Assert.Contains(_db.AuditLogs, log => log.Action == "Approved" && log.EntityId == day.Id.ToString());
+    }
+
+    [Fact]
+    public async Task SectionMaster_SubmitOwnTime_SavesWithoutApproval()
+    {
+        var department = new Department { Name = "Сборка" };
+        var master = new Employee { FullName = "Мастер", Department = department, UserId = "admin-user" };
+        var boat = new Boat { Number = "1" };
+        _db.AddRange(master, boat);
+        await _db.SaveChangesAsync();
+        var model = new Pages.Employee.DayModel(_db, CurrentUser(AppRoles.SectionMaster), new SettingsService(_db),
+            new AuditService(_db), new NotificationService(_db), null!);
+        SetTempData(model);
+        model.Input = new Pages.Employee.DayFormModel
+        {
+            Date = new DateOnly(2026, 11, 7),
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(18, 0),
+            ReturnUrl = "",
+            Entries = new List<Pages.Employee.EntryInput>
+            {
+                new() { BoatId = boat.Id, Hours = 8, WorkDescription = "Управление участком" },
+            },
+        };
+
+        await model.OnPostSubmitAsync();
+
+        var day = Assert.Single(_db.WorkDays);
+        Assert.Equal(TimeSheetStatus.Recorded, day.Status);
+        Assert.Null(day.SubmittedAt);
+        Assert.Null(day.ApprovedAt);
+        Assert.Null(day.ApprovedByUserId);
+        Assert.Empty(_db.Notifications);
     }
 
     [Fact]

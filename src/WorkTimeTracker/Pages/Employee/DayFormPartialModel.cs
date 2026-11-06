@@ -12,4 +12,5 @@ public class DayFormPartialModel
     public WorkDay? ExistingDay { get; init; }
     public bool ShowActions { get; init; } = true;
     public bool IsTimeOnly { get; init; }
+    public bool RequiresApproval { get; init; } = true;
 }

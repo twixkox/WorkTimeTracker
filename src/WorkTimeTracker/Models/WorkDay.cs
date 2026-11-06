@@ -9,10 +9,12 @@ public enum TimeSheetStatus
     Draft = 0,
     /// <summary>На утверждении у мастера участка.</summary>
     Submitted = 1,
-    /// <summary>Утверждён мастером (и начальником производства, если включена двухступенчатая схема).</summary>
+    /// <summary>Утверждён мастером, начальником производства или администратором.</summary>
     Approved = 2,
     /// <summary>Отклонён с комментарием, сотрудник дорабатывает.</summary>
     Rejected = 3,
+    /// <summary>Сохранён без утверждения: личное время мастера или режим «только время».</summary>
+    Recorded = 4,
 }
 
 /// <summary>Рабочий день сотрудника (одна строка табеля).</summary>
@@ -38,7 +40,7 @@ public class WorkDay
     public string? ApprovedByUserId { get; set; }
     public string? ApprovedByName { get; set; }
 
-    /// <summary>Вторая ступень утверждения (начальник производства).</summary>
+    /// <summary>Историческое поле прежней двухэтапной схемы; новые табели его не используют.</summary>
     public bool FinalApproved { get; set; }
 
     public ICollection<TimeEntry> TimeEntries { get; set; } = new List<TimeEntry>();

@@ -19,7 +19,6 @@ public class SettingsModel : PageModel
 
     [BindProperty] public decimal MaxHoursPerDay { get; set; }
     [BindProperty] public decimal OvertimeThreshold { get; set; }
-    [BindProperty] public bool TwoStageApproval { get; set; }
     [BindProperty] public string ShiftStart { get; set; } = "09:00";
     [BindProperty] public string ShiftEnd { get; set; } = "18:00";
     [BindProperty] public bool CheckIntervalOverlap { get; set; }
@@ -30,7 +29,6 @@ public class SettingsModel : PageModel
         MaxHoursPerDay = v.MaxHoursPerDay;
         OvertimeThreshold = v.OvertimeThreshold;
         CheckIntervalOverlap = v.CheckIntervalOverlap;
-        TwoStageApproval = await _settings.IsTwoStageApprovalAsync();
         var shift = await _settings.GetShiftTemplateAsync();
         if (shift is not null)
         {
@@ -43,12 +41,11 @@ public class SettingsModel : PageModel
     {
         await _settings.SetAsync(SettingKeys.MaxHoursPerDay, MaxHoursPerDay.ToString(System.Globalization.CultureInfo.InvariantCulture));
         await _settings.SetAsync(SettingKeys.OvertimeThreshold, OvertimeThreshold.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        await _settings.SetAsync(SettingKeys.TwoStageApproval, TwoStageApproval.ToString());
         await _settings.SetAsync(SettingKeys.ShiftStart, ShiftStart);
         await _settings.SetAsync(SettingKeys.ShiftEnd, ShiftEnd);
         await _settings.SetAsync(SettingKeys.CheckIntervalOverlap, CheckIntervalOverlap.ToString());
         await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Updated", "SystemSettings", null,
-            $"MaxHours={MaxHoursPerDay}, Overtime={OvertimeThreshold}, TwoStage={TwoStageApproval}, Shift={ShiftStart}-{ShiftEnd}");
+            $"MaxHours={MaxHoursPerDay}, Overtime={OvertimeThreshold}, Shift={ShiftStart}-{ShiftEnd}");
         TempData["Success"] = "Настройки сохранены.";
         return RedirectToPage();
     }

@@ -9,10 +9,10 @@ namespace WorkTimeTracker.Services;
 public static class WorkflowService
 {
     public static bool CanEmployeeEdit(TimeSheetStatus status)
-        => status is TimeSheetStatus.Draft or TimeSheetStatus.Rejected;
+        => status is TimeSheetStatus.Draft or TimeSheetStatus.Rejected or TimeSheetStatus.Recorded;
 
     public static bool CanSubmit(TimeSheetStatus status)
-        => status is TimeSheetStatus.Draft or TimeSheetStatus.Rejected;
+        => status is TimeSheetStatus.Draft or TimeSheetStatus.Rejected or TimeSheetStatus.Recorded;
 
     public static bool CanApprove(TimeSheetStatus status)
         => status == TimeSheetStatus.Submitted;
@@ -34,14 +34,14 @@ public static class WorkflowService
         return true;
     }
 
-    public static bool TryApprove(WorkDay day, string userId, string userName, bool final)
+    public static bool TryApprove(WorkDay day, string userId, string userName)
     {
         if (!CanApprove(day.Status)) return false;
         day.Status = TimeSheetStatus.Approved;
         day.ApprovedAt = DateTime.Now;
         day.ApprovedByUserId = userId;
         day.ApprovedByName = userName;
-        day.FinalApproved = final;
+        day.FinalApproved = false;
         day.RejectComment = null;
         return true;
     }

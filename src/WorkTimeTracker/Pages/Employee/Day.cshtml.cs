@@ -38,6 +38,7 @@ public class DayModel : PageModel
     public bool CanEdit { get; private set; }
     public List<ValidationIssue> Issues { get; private set; } = new();
     public bool ShowWeekLink { get; private set; }
+    public bool IsMasterOwnTime { get; private set; }
 
     public async Task<IActionResult> OnGet(DateOnly? date, string? returnUrl)
     {
@@ -53,6 +54,7 @@ public class DayModel : PageModel
     private async Task<bool> LoadAsync(DateOnly date, string? returnUrl)
     {
         Employee = await _currentUser.GetEmployeeAsync();
+        IsMasterOwnTime = _currentUser.IsInRole(AppRoles.SectionMaster);
         if (Employee is null) return false;
 
         var shift = await _settings.GetShiftTemplateAsync();
@@ -75,7 +77,7 @@ public class DayModel : PageModel
             }).ToList() ?? new List<EntryInput>(),
         };
 
-        CanEdit = Day is null || WorkflowService.CanEmployeeEdit(Day.Status);
+        CanEdit = Day is null || IsMasterOwnTime || WorkflowService.CanEmployeeEdit(Day.Status);
         ShowWeekLink = Employee.Department?.IsWeeklyView == true;
         Boats = await _db.Boats.Where(b => b.IsActive).OrderBy(b => b.Number).ToListAsync();
         WorkTypes = await _db.WorkTypes.Where(w => w.IsActive).OrderBy(w => w.Name).ToListAsync();
@@ -85,6 +87,7 @@ public class DayModel : PageModel
     private async Task<IActionResult> SaveAsync(bool submit)
     {
         Employee = await _currentUser.GetEmployeeAsync();
+        IsMasterOwnTime = _currentUser.IsInRole(AppRoles.SectionMaster);
         if (Employee is null)
             return RedirectToPage("/Employee/Index");
 
@@ -92,7 +95,7 @@ public class DayModel : PageModel
             .Include(w => w.TimeEntries)
             .FirstOrDefaultAsync(w => w.EmployeeId == Employee.Id && w.Date == Input.Date);
 
-        if (day is not null && !WorkflowService.CanEmployeeEdit(day.Status))
+        if (day is not null && !IsMasterOwnTime && !WorkflowService.CanEmployeeEdit(day.Status))
         {
             TempData["Error"] = "Табель на утверждении или утверждён — редактирование недоступно.";
             return Redirect($"/Employee/Day?date={Input.Date:yyyy-MM-dd}");
@@ -105,7 +108,8 @@ public class DayModel : PageModel
         var isTimeOnly = Employee.Department?.IsTimeOnly == true;
         var settings = await _settings.GetValidationSettingsAsync();
         var entries = isTimeOnly ? new List<EntryInput>() : Input.EffectiveEntries();
-        var validation = TimeCalculationService.Validate(Input.StartTime, Input.EndTime, MapEntries(entries), settings, strict: submit && !isTimeOnly);
+        var validation = TimeCalculationService.Validate(Input.StartTime, Input.EndTime, MapEntries(entries), settings,
+            strict: (submit || IsMasterOwnTime) && !isTimeOnly);
 
         foreach (var state in ModelState)
         {
@@ -116,13 +120,13 @@ public class DayModel : PageModel
             }
         }
 
-        if ((submit || isTimeOnly) && validation.HasErrors)
+        if ((submit || isTimeOnly || IsMasterOwnTime) && validation.HasErrors)
         {
             Issues = validation.Issues;
             await PrepareViewAsync(day);
             return Page();
         }
-        if (entries.Count == 0 && submit && !isTimeOnly)
+        if (entries.Count == 0 && (submit || IsMasterOwnTime) && !isTimeOnly)
         {
             Issues = new List<ValidationIssue>
             {
@@ -151,7 +155,7 @@ public class DayModel : PageModel
         await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName,
             isNew ? "Created" : "Updated", "WorkDay", day.Id.ToString(), $"{Employee.FullName}, {day.Date:dd.MM.yyyy}");
 
-        if (submit && !isTimeOnly)
+        if (submit && !isTimeOnly && !IsMasterOwnTime)
         {
             if (WorkflowService.TrySubmit(day))
             {
@@ -163,9 +167,22 @@ public class DayModel : PageModel
         }
         else
         {
+            if (isTimeOnly || IsMasterOwnTime)
+            {
+                day.Status = TimeSheetStatus.Recorded;
+                day.SubmittedAt = null;
+                day.ApprovedAt = null;
+                day.ApprovedByUserId = null;
+                day.ApprovedByName = null;
+                day.FinalApproved = false;
+                day.RejectComment = null;
+                await _db.SaveChangesAsync();
+            }
             TempData["Success"] = isTimeOnly
                 ? $"Время за {day.Date:dd.MM.yyyy} сохранено."
-                : $"Черновик за {day.Date:dd.MM.yyyy} сохранён.";
+                : IsMasterOwnTime
+                    ? $"Табель за {day.Date:dd.MM.yyyy} сохранён без утверждения."
+                    : $"Черновик за {day.Date:dd.MM.yyyy} сохранён.";
         }
 
         if (!string.IsNullOrEmpty(Input.ReturnUrl) && Url.IsLocalUrl(Input.ReturnUrl))

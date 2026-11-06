@@ -56,7 +56,7 @@ public class DayModel : PageModel
         if (IsSectionMaster && Employee.DepartmentId != (await _currentUser.GetEmployeeAsync())?.DepartmentId)
             return Forbid();
 
-        if (WorkflowService.TryApprove(Day, _currentUser.UserId ?? "", _currentUser.UserName, final: false))
+        if (WorkflowService.TryApprove(Day, _currentUser.UserId ?? "", _currentUser.UserName))
         {
             await _db.SaveChangesAsync();
             await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Approved", "WorkDay", Day.Id.ToString(),

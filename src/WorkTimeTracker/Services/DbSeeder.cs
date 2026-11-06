@@ -227,7 +227,6 @@ public static class DbSeeder
         }
         await EnsureSettingAsync(SettingKeys.MaxHoursPerDay, "16");
         await EnsureSettingAsync(SettingKeys.OvertimeThreshold, "8");
-        await EnsureSettingAsync(SettingKeys.TwoStageApproval, "false");
         await EnsureSettingAsync(SettingKeys.ShiftStart, ShiftDefaults.Start.ToString("HH:mm"));
         await EnsureSettingAsync(SettingKeys.ShiftEnd, ShiftDefaults.End.ToString("HH:mm"));
         await EnsureSettingAsync(SettingKeys.CheckIntervalOverlap, "false");

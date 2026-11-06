@@ -22,6 +22,7 @@ public class WeekModel : PageModel
     }
 
     public Models.Employee? Employee { get; private set; }
+    public bool IsMasterOwnTime { get; private set; }
     public DateOnly WeekStart { get; private set; }
     public List<DayFormModel> Days { get; private set; } = new();
     public List<Boat> Boats { get; private set; } = new();
@@ -31,6 +32,7 @@ public class WeekModel : PageModel
     public async Task<IActionResult> OnGet(DateOnly? week)
     {
         Employee = await _currentUser.GetEmployeeAsync();
+        IsMasterOwnTime = _currentUser.IsInRole(AppRoles.SectionMaster);
         if (Employee is null) return RedirectToPage("/Index");
 
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -73,5 +75,5 @@ public class WeekModel : PageModel
     }
 
     public bool CanEdit(DateOnly date) =>
-        !Existing.TryGetValue(date, out var day) || WorkflowService.CanEmployeeEdit(day.Status);
+        IsMasterOwnTime || !Existing.TryGetValue(date, out var day) || WorkflowService.CanEmployeeEdit(day.Status);
 }

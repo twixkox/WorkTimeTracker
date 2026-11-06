@@ -43,12 +43,6 @@ public class SettingsService
         };
     }
 
-    public async Task<bool> IsTwoStageApprovalAsync()
-    {
-        var v = await GetAsync(SettingKeys.TwoStageApproval);
-        return v is not null && bool.Parse(v);
-    }
-
     public async Task<(TimeOnly Start, TimeOnly End)?> GetShiftTemplateAsync()
     {
         var start = await GetAsync(SettingKeys.ShiftStart);

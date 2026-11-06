@@ -16,7 +16,6 @@ public static class SettingKeys
 {
     public const string MaxHoursPerDay = "MaxHoursPerDay";
     public const string OvertimeThreshold = "OvertimeThreshold";
-    public const string TwoStageApproval = "TwoStageApproval";
     public const string ShiftStart = "ShiftStart";
     public const string ShiftEnd = "ShiftEnd";
     public const string CheckIntervalOverlap = "CheckIntervalOverlap";

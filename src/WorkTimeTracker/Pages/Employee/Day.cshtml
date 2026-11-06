@@ -16,10 +16,6 @@
         @if (Model.Day is not null && !isTimeOnly)
         {
             @Html.Raw(ViewHelpers.StatusBadge(Model.Day.Status))
-            @if (Model.Day.Status == WorkTimeTracker.Models.TimeSheetStatus.Approved && Model.Day.FinalApproved)
-            {
-                <span class="badge bg-success-subtle text-success-emphasis status-badge">Финально</span>
-            }
         }
         @if (Model.ShowWeekLink)
         {
@@ -70,6 +66,7 @@ else if (!isTimeOnly && Model.Day?.Status == WorkTimeTracker.Models.TimeSheetSta
                 CanEdit = Model.CanEdit,
                 ExistingDay = Model.Day,
                 IsTimeOnly = Model.Employee?.Department?.IsTimeOnly == true,
+                RequiresApproval = !Model.IsMasterOwnTime && !isTimeOnly,
                 ShowActions = true }" />
         </form>
     </div>

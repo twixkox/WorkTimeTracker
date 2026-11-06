@@ -28,8 +28,7 @@
                 <div class="card-body py-2">
                     <div class="small">
                         На утверждении: <strong>@stats.Submitted</strong><br />
-                        Утверждено мастером: <strong>@stats.Approved</strong><br />
-                        Финально: <strong>@stats.Final</strong>
+                        Утверждено: <strong>@stats.Approved</strong>
                     </div>
                 </div>
                 <div class="card-footer py-2 bg-transparent border-0">
@@ -80,47 +79,4 @@ else
             </table>
         </div>
     </div>
-}
-
-@if (Model.TwoStageApproval)
-{
-    <h5 class="mt-4">Ожидают финального утверждения</h5>
-    var pending = Model.Days.Where(d => d.Status == TimeSheetStatus.Approved && !d.FinalApproved)
-        .OrderBy(d => d.Date).ToList();
-    if (!pending.Any())
-    {
-        <div class="alert alert-success py-2">Все табели финально утверждены.</div>
-    }
-    else
-    {
-        <div class="card">
-            <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead class="table-light">
-                        <tr><th>Сотрудник</th><th>Участок</th><th>Дата</th><th class="text-end">Часов</th><th>Утвердил</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var d in pending)
-                        {
-                            <tr>
-                                <td>@d.Employee?.FullName</td>
-                                <td>@d.Employee?.Department?.Name</td>
-                                <td>@d.Date.ToString("dd.MM.yyyy")</td>
-                                <td class="text-end">@d.WorkedHours.ToString("0.##")</td>
-                                <td>@d.ApprovedByName</td>
-                                <td class="text-end">
-                                    <form method="post" asp-page-handler="FinalApprove" class="d-inline">
-                                        <input type="hidden" name="dayId" value="@d.Id" />
-                                        <input type="hidden" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
-                                        <input type="hidden" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
-                                        <button class="btn btn-sm btn-success">Финально утвердить</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    }
 }
