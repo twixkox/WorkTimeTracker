@@ -74,6 +74,8 @@
                 <div class="card border-success">
                     <div class="card-body">
                         <form method="post" asp-page-handler="Approve">
+                            <input type="hidden" name="employeeId" value="@Model.Employee?.Id" />
+                            <input type="hidden" name="date" value="@Model.Input.Date.ToString("yyyy-MM-dd")" />
                             <button class="btn btn-success"><i class="bi bi-check-lg"></i> Утвердить табель</button>
                         </form>
                     </div>
@@ -83,6 +85,8 @@
                 <div class="card border-danger">
                     <div class="card-body">
                         <form method="post" asp-page-handler="Reject">
+                            <input type="hidden" name="employeeId" value="@Model.Employee?.Id" />
+                            <input type="hidden" name="date" value="@Model.Input.Date.ToString("yyyy-MM-dd")" />
                             <label class="form-label">Причина отклонения (обязательно):</label>
                             <textarea name="RejectComment" class="form-control mb-2" rows="2"></textarea>
                             <button class="btn btn-danger"><i class="bi bi-x-lg"></i> Отклонить</button>

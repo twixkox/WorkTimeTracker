@@ -54,6 +54,30 @@ public class ApprovalAndDepartmentManagementTests : IDisposable
         Assert.Contains(_db.AuditLogs, log => log.Action == "Approved" && log.EntityId == day.Id.ToString());
     }
 
+    [Theory]
+    [InlineData(AppRoles.Admin)]
+    [InlineData(AppRoles.SectionMaster)]
+    public async Task MasterDay_AdminOrOwnDepartmentMaster_ApproveSubmittedDay(string role)
+    {
+        var department = new Department { Name = "Сборка" };
+        var employee = new Employee { FullName = "Работник", Department = department, UserId = "employee-user" };
+        var currentEmployee = new Employee { FullName = "Руководитель", Department = department, UserId = "admin-user" };
+        var date = new DateOnly(2026, 11, 9);
+        var day = new WorkDay { Employee = employee, Date = date, Status = TimeSheetStatus.Submitted };
+        _db.AddRange(currentEmployee, day);
+        await _db.SaveChangesAsync();
+        var model = new Pages.Master.DayModel(_db, CurrentUser(role), new SettingsService(_db),
+            new AuditService(_db), new NotificationService(_db));
+        SetTempData(model);
+
+        var result = await model.OnPostApproveAsync(employee.Id, date);
+
+        Assert.IsType<Microsoft.AspNetCore.Mvc.RedirectResult>(result);
+        Assert.Equal(TimeSheetStatus.Approved, day.Status);
+        Assert.Equal("admin-user", day.ApprovedByUserId);
+        Assert.Contains(_db.AuditLogs, log => log.Action == "Approved" && log.EntityId == day.Id.ToString());
+    }
+
     [Fact]
     public async Task SectionMaster_SubmitOwnTime_SavesWithoutApproval()
     {
