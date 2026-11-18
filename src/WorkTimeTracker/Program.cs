@@ -88,6 +88,8 @@ builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<MissingTimeSheetNotificationService>();
 builder.Services.AddHostedService<DailyMissingTimeSheetWorker>();
+builder.Services.AddScoped<EngineeringTaskReminderService>();
+builder.Services.AddHostedService<EngineeringTaskReminderWorker>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<ExcelService>();
 

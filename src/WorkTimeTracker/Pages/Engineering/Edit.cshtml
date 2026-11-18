@@ -5,13 +5,16 @@
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h4 class="mb-0">Редактирование задачи КБ</h4>
+    <div class="d-flex align-items-center gap-2">
+        <h4 class="mb-0">Редактирование задачи КБ</h4>
+        <span class="badge text-bg-secondary">@EditModel.StatusName(Model.Status)</span>
+    </div>
     <a asp-page="./Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> К списку</a>
 </div>
 
 @if (Model.Item is not null)
 {
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body">
             <div class="row g-3 mb-4 small">
                 <div class="col-md-4">
@@ -27,14 +30,10 @@
             <form method="post">
                 <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
                 <div class="row g-3">
-                    <div class="col-lg-8">
+                    <div class="col-12">
                         <label asp-for="Title" class="form-label">Задача</label>
                         <input asp-for="Title" class="form-control" required />
                         <span asp-validation-for="Title" class="text-danger small"></span>
-                    </div>
-                    <div class="col-lg-4">
-                        <label asp-for="HullNumber" class="form-label">Введено с № корпуса</label>
-                        <input asp-for="HullNumber" class="form-control" />
                     </div>
                     <div class="col-lg-6">
                         <label asp-for="AssigneeId" class="form-label">Исполнитель</label>
@@ -42,26 +41,67 @@
                             <option value="">Не назначен</option>
                         </select>
                         <span asp-validation-for="AssigneeId" class="text-danger small"></span>
-                        <div class="form-text">В списке только активные пользователи с ролью «Инженер».</div>
+                        <div class="form-text">Назначение активного инженера переводит новую задачу в «Назначена». Снятие исполнителя возвращает её в «Новая».</div>
                     </div>
-                    <div class="col-md-6 col-lg-3">
-                        <label asp-for="StartedOn" class="form-label">Взято в работу</label>
-                        <input asp-for="StartedOn" type="date" class="form-control" />
+                    <div class="col-lg-6">
+                        <label asp-for="BoatId" class="form-label">Корпус</label>
+                        <select asp-for="BoatId" asp-items="Model.Boats" class="form-select">
+                            <option value="">Не выбран</option>
+                        </select>
+                        <span asp-validation-for="BoatId" class="text-danger small"></span>
+                        <div class="form-text">В списке только активные корпуса из справочника катеров.</div>
                     </div>
-                    <div class="col-md-6 col-lg-3">
-                        <label asp-for="PlannedDueOn" class="form-label">План. срок</label>
+                    <div class="col-md-6">
+                        <label asp-for="Priority" class="form-label">Приоритет</label>
+                        <select asp-for="Priority" class="form-select">
+                            <option value="@EngineeringTaskPriority.Low">Низкий</option>
+                            <option value="@EngineeringTaskPriority.Normal">Обычный</option>
+                            <option value="@EngineeringTaskPriority.High">Высокий</option>
+                            <option value="@EngineeringTaskPriority.Urgent">Срочный</option>
+                        </select>
+                        <span asp-validation-for="Priority" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Status" class="form-label">Статус</label>
+                        <select asp-for="Status" class="form-select">
+                            <option value="@EngineeringTaskStatus.New">Новая</option>
+                            <option value="@EngineeringTaskStatus.Assigned">Назначена</option>
+                            <option value="@EngineeringTaskStatus.InProgress">В работе</option>
+                            <option value="@EngineeringTaskStatus.Done">Готова</option>
+                        </select>
+                        <span asp-validation-for="Status" class="text-danger small"></span>
+                        <div class="form-text">Переход возможен только на один шаг: Новая → Назначена → В работе → Готова, либо обратно.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PlannedDueOn" class="form-label">Плановый срок</label>
                         <input asp-for="PlannedDueOn" type="date" class="form-control" />
+                        <div class="form-text">Ориентир по сроку выполнения работ.</div>
                     </div>
-                    <div class="col-md-6 col-lg-3">
-                        <label asp-for="CompletedOn" class="form-label">Готово</label>
-                        <input asp-for="CompletedOn" type="date" class="form-control" />
-                    </div>
-                    <div class="col-md-6 col-lg-3">
+                    <div class="col-md-6">
                         <label asp-for="Deadline" class="form-label">Дедлайн</label>
                         <input asp-for="Deadline" type="date" class="form-control" />
+                        <div class="form-text">Контрольный срок, используемый для предупреждений и напоминаний.</div>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="DeadlineChangeComment" class="form-label">Причина изменения дедлайна</label>
+                        <textarea asp-for="DeadlineChangeComment" class="form-control" rows="2"
+                                  placeholder="Обязательно заполните при изменении дедлайна"></textarea>
+                        <span asp-validation-for="DeadlineChangeComment" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Взято в работу <span class="text-muted fw-normal">(автоматически)</span></label>
+                        <input type="text" value="@(Model.Item.StartedOn?.ToString("dd.MM.yyyy") ?? "—")"
+                               class="form-control bg-light" readonly tabindex="-1" />
+                        <div class="form-text">Заполняется при переходе в «В работе».</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Готово <span class="text-muted fw-normal">(автоматически)</span></label>
+                        <input type="text" value="@(Model.Item.CompletedOn?.ToString("dd.MM.yyyy") ?? "—")"
+                               class="form-control bg-light" readonly tabindex="-1" />
+                        <div class="form-text">Заполняется при переходе в «Готова».</div>
                     </div>
                 </div>
-                <div class="mt-4 d-flex gap-2">
+                <div class="mt-4 d-flex flex-wrap gap-2">
                     <button class="btn btn-primary"><i class="bi bi-check-lg"></i> Сохранить</button>
                     <a asp-page="./Index" class="btn btn-outline-secondary">Отмена</a>
                 </div>

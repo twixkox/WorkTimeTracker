@@ -388,6 +388,9 @@ namespace WorkTimeTracker.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("BoatId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateOnly?>("CompletedOn")
                         .HasColumnType("TEXT");
 
@@ -407,15 +410,27 @@ namespace WorkTimeTracker.Migrations
                     b.Property<DateOnly?>("Deadline")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateOnly?>("DeadlineReminderSentOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("HullNumber")
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("OverdueReminderSentOn")
                         .HasColumnType("TEXT");
 
                     b.Property<DateOnly?>("PlannedDueOn")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateOnly?>("StartedOn")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -426,7 +441,15 @@ namespace WorkTimeTracker.Migrations
 
                     b.HasIndex("AssigneeId");
 
+                    b.HasIndex("BoatId");
+
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Deadline");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("EngineeringTasks");
                 });
@@ -651,7 +674,14 @@ namespace WorkTimeTracker.Migrations
                         .HasForeignKey("AssigneeId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("WorkTimeTracker.Models.Boat", "Boat")
+                        .WithMany()
+                        .HasForeignKey("BoatId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Assignee");
+
+                    b.Navigation("Boat");
                 });
 
             modelBuilder.Entity("WorkTimeTracker.Models.TimeEntry", b =>

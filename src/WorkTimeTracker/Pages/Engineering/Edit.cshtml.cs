@@ -30,6 +30,7 @@ public class EditModel : PageModel
 
     public EngineeringTask? Item { get; private set; }
     public SelectList Engineers { get; private set; } = default!;
+    public SelectList Boats { get; private set; } = default!;
     private bool CanEdit => _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
 
     [BindProperty]
@@ -37,23 +38,26 @@ public class EditModel : PageModel
     public string Title { get; set; } = string.Empty;
 
     [BindProperty]
+    public EngineeringTaskPriority Priority { get; set; }
+
+    [BindProperty]
+    public EngineeringTaskStatus Status { get; set; }
+
+    [BindProperty]
     public string? AssigneeId { get; set; }
 
     [BindProperty]
-    public DateOnly? StartedOn { get; set; }
+    public int? BoatId { get; set; }
 
     [BindProperty]
     public DateOnly? PlannedDueOn { get; set; }
 
     [BindProperty]
-    public DateOnly? CompletedOn { get; set; }
-
-    [BindProperty]
     public DateOnly? Deadline { get; set; }
 
     [BindProperty]
-    [StringLength(100, ErrorMessage = "Номер корпуса не может быть длиннее 100 символов.")]
-    public string? HullNumber { get; set; }
+    [StringLength(1000, ErrorMessage = "Комментарий к переносу дедлайна не может быть длиннее 1000 символов.")]
+    public string? DeadlineChangeComment { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -62,13 +66,14 @@ public class EditModel : PageModel
         if (Item is null) return NotFound();
 
         Title = Item.Title;
+        Priority = Item.Priority;
+        Status = Item.Status;
         AssigneeId = Item.AssigneeId;
-        StartedOn = Item.StartedOn;
+        BoatId = Item.BoatId;
         PlannedDueOn = Item.PlannedDueOn;
-        CompletedOn = Item.CompletedOn;
         Deadline = Item.Deadline;
-        HullNumber = Item.HullNumber;
         await LoadEngineersAsync();
+        await LoadBoatsAsync();
         return Page();
     }
 
@@ -80,6 +85,9 @@ public class EditModel : PageModel
 
         var engineers = await GetActiveEngineersAsync();
         SetEngineers(engineers);
+        var boats = await GetActiveBoatsAsync();
+        SetBoats(boats);
+
         ApplicationUser? assignee = null;
         if (!string.IsNullOrWhiteSpace(AssigneeId))
         {
@@ -87,28 +95,85 @@ public class EditModel : PageModel
             if (assignee is null)
                 ModelState.AddModelError(nameof(AssigneeId), "Выберите активного пользователя с ролью «Инженер».");
         }
+        if (BoatId is { } boatId && boats.All(b => b.Id != boatId))
+            ModelState.AddModelError(nameof(BoatId), "Выберите активный корпус из справочника.");
         if (string.IsNullOrWhiteSpace(Title))
             ModelState.AddModelError(nameof(Title), "Укажите название задачи.");
-        if (StartedOn is { } startedOn && CompletedOn is { } completedOn && completedOn < startedOn)
-            ModelState.AddModelError(nameof(CompletedOn), "Дата завершения не может быть раньше даты начала.");
-        if (!ModelState.IsValid) return Page();
+        if (!Enum.IsDefined(Priority))
+            ModelState.AddModelError(nameof(Priority), "Выберите корректный приоритет.");
+        if (!Enum.IsDefined(Status))
+            ModelState.AddModelError(nameof(Status), "Выберите корректный статус.");
 
         var previousAssigneeId = Item.AssigneeId;
+        var previousStatus = Item.Status;
+        var previousPriority = Item.Priority;
+        var previousDeadline = Item.Deadline;
+        var deadlineChanged = Deadline != previousDeadline;
+        if (deadlineChanged && previousDeadline is not null && string.IsNullOrWhiteSpace(DeadlineChangeComment))
+            ModelState.AddModelError(nameof(DeadlineChangeComment), "Укажите причину изменения дедлайна.");
+
+        var removingAssignee = assignee is null && previousAssigneeId is not null;
+        var nextStatus = Status;
+        if (removingAssignee)
+        {
+            nextStatus = EngineeringTaskStatus.New;
+        }
+        else
+        {
+            if (!IsValidTransition(previousStatus, Status))
+                ModelState.AddModelError(nameof(Status), "Статус можно изменить только на один шаг вперёд или назад.");
+
+            if (assignee is null)
+                nextStatus = EngineeringTaskStatus.New;
+            else if (nextStatus == EngineeringTaskStatus.New)
+                nextStatus = EngineeringTaskStatus.Assigned;
+
+            if (nextStatus != Status && !IsValidTransition(previousStatus, nextStatus))
+                ModelState.AddModelError(nameof(Status), "Недопустимый переход статуса.");
+        }
+        if (nextStatus == EngineeringTaskStatus.Done && assignee is null)
+            ModelState.AddModelError(nameof(Status), "Нельзя завершить задачу без исполнителя.");
+        if (!ModelState.IsValid) return Page();
+
         var previousAssignee = Item.Assignee is null
             ? "не назначен"
             : UserName(Item.Assignee);
         Item.Title = Title.Trim();
+        Item.Priority = Priority;
+        Item.Status = nextStatus;
         Item.AssigneeId = assignee?.Id;
-        Item.StartedOn = StartedOn;
+        Item.BoatId = BoatId;
         Item.PlannedDueOn = PlannedDueOn;
-        Item.CompletedOn = CompletedOn;
         Item.Deadline = Deadline;
-        Item.HullNumber = string.IsNullOrWhiteSpace(HullNumber) ? null : HullNumber.Trim();
+        ApplyStatusDates(Item, previousStatus, DateOnly.FromDateTime(DateTime.Today));
+        if (deadlineChanged)
+        {
+            Item.DeadlineReminderSentOn = null;
+            Item.OverdueReminderSentOn = null;
+        }
         await _db.SaveChangesAsync();
 
         var newAssignee = assignee is null ? "не назначен" : UserName(assignee);
         await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Updated", "EngineeringTask",
             Item.Id.ToString(), $"{Item.Title}; исполнитель: {previousAssignee} → {newAssignee}");
+        if (deadlineChanged)
+        {
+            var comment = string.IsNullOrWhiteSpace(DeadlineChangeComment) ? "не указан" : DeadlineChangeComment.Trim();
+            await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "DeadlineChanged", "EngineeringTask",
+                Item.Id.ToString(), $"Дедлайн: {FormatDate(previousDeadline)} → {FormatDate(Item.Deadline)}; комментарий: {comment}");
+            if (assignee is not null)
+            {
+                await _notifications.NotifyAsync(assignee.Id, "Изменён дедлайн задачи КБ",
+                    $"{Item.Title}. Дедлайн: {FormatDate(previousDeadline)} → {FormatDate(Item.Deadline)}. Комментарий: {comment}",
+                    "/Engineering/Index");
+            }
+        }
+        if (previousPriority != Item.Priority && assignee is not null)
+        {
+            await _notifications.NotifyAsync(assignee.Id, "Изменён приоритет задачи КБ",
+                $"{Item.Title}. Приоритет: {PriorityName(previousPriority)} → {PriorityName(Item.Priority)}.",
+                "/Engineering/Index");
+        }
         if (assignee is not null && previousAssigneeId != assignee.Id)
         {
             var deadline = Item.Deadline is { } date ? $" Дедлайн: {date:dd.MM.yyyy}." : string.Empty;
@@ -120,7 +185,55 @@ public class EditModel : PageModel
         return RedirectToPage("./Index");
     }
 
+    public static string PriorityName(EngineeringTaskPriority priority) => priority switch
+    {
+        EngineeringTaskPriority.Low => "Низкий",
+        EngineeringTaskPriority.Normal => "Обычный",
+        EngineeringTaskPriority.High => "Высокий",
+        EngineeringTaskPriority.Urgent => "Срочный",
+        _ => priority.ToString()
+    };
+
+    public static string StatusName(EngineeringTaskStatus status) => status switch
+    {
+        EngineeringTaskStatus.New => "Новая",
+        EngineeringTaskStatus.Assigned => "Назначена",
+        EngineeringTaskStatus.InProgress => "В работе",
+        EngineeringTaskStatus.Done => "Готова",
+        _ => status.ToString()
+    };
+
+    private static bool IsValidTransition(EngineeringTaskStatus current, EngineeringTaskStatus next)
+        => next == current || (int)next == (int)current + 1 || (int)next == (int)current - 1;
+
+    private static void ApplyStatusDates(EngineeringTask item, EngineeringTaskStatus previousStatus, DateOnly today)
+    {
+        if (item.Status == EngineeringTaskStatus.InProgress && previousStatus != EngineeringTaskStatus.InProgress)
+            item.StartedOn ??= today;
+        if (item.Status == EngineeringTaskStatus.Done && previousStatus != EngineeringTaskStatus.Done)
+        {
+            item.StartedOn ??= today;
+            item.CompletedOn = today;
+        }
+        if (previousStatus == EngineeringTaskStatus.Done && item.Status != EngineeringTaskStatus.Done)
+            item.CompletedOn = null;
+        if (previousStatus == EngineeringTaskStatus.InProgress && item.Status < EngineeringTaskStatus.InProgress)
+        {
+            item.StartedOn = null;
+            item.CompletedOn = null;
+        }
+        if (item.Status == EngineeringTaskStatus.New)
+        {
+            item.StartedOn = null;
+            item.CompletedOn = null;
+        }
+    }
+
+    private static string FormatDate(DateOnly? date) => date?.ToString("dd.MM.yyyy") ?? "не задан";
+
     private async Task LoadEngineersAsync() => SetEngineers(await GetActiveEngineersAsync());
+
+    private async Task LoadBoatsAsync() => SetBoats(await GetActiveBoatsAsync());
 
     private async Task<List<ApplicationUser>> GetActiveEngineersAsync()
         => (await _userManager.GetUsersInRoleAsync(AppRoles.Engineer))
@@ -129,8 +242,22 @@ public class EditModel : PageModel
             .ThenBy(u => u.Email)
             .ToList();
 
+    private async Task<List<Boat>> GetActiveBoatsAsync()
+        => await _db.Boats.AsNoTracking()
+            .Where(b => b.IsActive)
+            .OrderBy(b => b.Number)
+            .ThenBy(b => b.Name)
+            .ToListAsync();
+
     private void SetEngineers(List<ApplicationUser> engineers)
         => Engineers = new SelectList(engineers.Select(u => new { u.Id, Name = UserName(u) }), "Id", "Name", AssigneeId);
+
+    private void SetBoats(List<Boat> boats)
+        => Boats = new SelectList(boats.Select(b => new
+        {
+            b.Id,
+            Name = string.IsNullOrWhiteSpace(b.Name) ? b.Number : $"{b.Number} · {b.Name}"
+        }), "Id", "Name", BoatId);
 
     private static string UserName(ApplicationUser user)
         => string.IsNullOrWhiteSpace(user.DisplayName) ? user.Email ?? user.Id : user.DisplayName;

@@ -77,9 +77,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<EngineeringTask>()
             .HasIndex(t => t.AssigneeId);
         builder.Entity<EngineeringTask>()
+            .HasIndex(t => t.Status);
+        builder.Entity<EngineeringTask>()
+            .HasIndex(t => t.Priority);
+        builder.Entity<EngineeringTask>()
+            .HasIndex(t => t.Deadline);
+        builder.Entity<EngineeringTask>()
+            .HasIndex(t => t.BoatId);
+        builder.Entity<EngineeringTask>()
             .HasOne(t => t.Assignee)
             .WithMany()
             .HasForeignKey(t => t.AssigneeId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.Entity<EngineeringTask>()
+            .HasOne(t => t.Boat)
+            .WithMany()
+            .HasForeignKey(t => t.BoatId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

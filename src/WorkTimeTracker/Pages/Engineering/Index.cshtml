@@ -4,32 +4,46 @@
     ViewData["Title"] = "Конструкторское бюро";
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="page-heading">
     <div>
+        <div class="page-eyebrow">Инженерные задачи</div>
         <h4 class="mb-1">Конструкторское бюро</h4>
-        <div class="text-muted small">Задачи и сроки их выполнения</div>
+        <div class="text-muted small">Задачи, приоритеты и сроки их выполнения</div>
     </div>
 </div>
 
 @if (Model.CanCreate)
 {
-    <div class="card mb-3">
+    <div class="card engineering-create-card mb-3">
         <div class="card-header"><strong>Новое задание</strong></div>
         <div class="card-body">
-            <form method="post" asp-page-handler="Create" class="row g-2 align-items-end">
+            <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
                 <input type="hidden" name="filter" value="@Model.Filter" />
+                <input type="hidden" name="priority" value="@(Model.PriorityFilter is { } priority ? ((int)priority).ToString() : "")" />
                 <input type="hidden" name="search" value="@Model.Search" />
-                <div class="col-lg-7">
+                <div class="col-lg-5">
                     <label asp-for="Title" class="form-label">Задача</label>
                     <input asp-for="Title" class="form-control" required />
                     <span asp-validation-for="Title" class="text-danger small"></span>
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <label asp-for="HullNumber" class="form-label">№ корпуса <span class="text-muted fw-normal">(необязательно)</span></label>
-                    <input asp-for="HullNumber" class="form-control" />
-                    <span asp-validation-for="HullNumber" class="text-danger small"></span>
+                <div class="col-md-5 col-lg-3">
+                    <label asp-for="BoatId" class="form-label">Катер <span class="text-muted fw-normal">(необязательно)</span></label>
+                    <select asp-for="BoatId" asp-items="Model.Boats" class="form-select">
+                        <option value="">Не выбран</option>
+                    </select>
+                    <span asp-validation-for="BoatId" class="text-danger small"></span>
                 </div>
-                <div class="col-md-6 col-lg-2 d-grid">
+                <div class="col-md-4 col-lg-2">
+                    <label asp-for="Priority" class="form-label">Приоритет</label>
+                    <select asp-for="Priority" class="form-select">
+                        <option value="0">Низкий</option>
+                        <option value="1">Обычный</option>
+                        <option value="2">Высокий</option>
+                        <option value="3">Срочный</option>
+                    </select>
+                    <span asp-validation-for="Priority" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3 col-lg-2 d-grid">
                     <button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Создать</button>
                 </div>
             </form>
@@ -37,24 +51,34 @@
     </div>
 }
 
-<div class="card mb-3">
-    <div class="card-body py-2">
+<div class="card engineering-filter-card mb-3">
+    <div class="card-body py-3">
         <form method="get" class="row g-2 align-items-center">
-            <div class="col-sm-5 col-lg-3">
+            <div class="col-sm-6 col-lg-2">
                 <select name="filter" class="form-select form-select-sm" aria-label="Фильтр по статусу">
-                    <option value="active" selected="@(Model.Filter == "active")">В работе</option>
+                    <option value="active" selected="@(Model.Filter == "active")">Активные</option>
+                    <option value="overdue" selected="@(Model.Filter == "overdue")">Просроченные</option>
                     <option value="completed" selected="@(Model.Filter == "completed")">Завершённые</option>
                     <option value="all" selected="@(Model.Filter == "all")">Все</option>
                 </select>
             </div>
-            <div class="col-sm-7 col-lg-5">
+            <div class="col-sm-6 col-lg-2">
+                <select name="priority" class="form-select form-select-sm" aria-label="Фильтр по приоритету">
+                    <option value="">Любой приоритет</option>
+                    <option value="0" selected="@(Model.PriorityFilter == WorkTimeTracker.Models.EngineeringTaskPriority.Low)">Низкий</option>
+                    <option value="1" selected="@(Model.PriorityFilter == WorkTimeTracker.Models.EngineeringTaskPriority.Normal)">Обычный</option>
+                    <option value="2" selected="@(Model.PriorityFilter == WorkTimeTracker.Models.EngineeringTaskPriority.High)">Высокий</option>
+                    <option value="3" selected="@(Model.PriorityFilter == WorkTimeTracker.Models.EngineeringTaskPriority.Urgent)">Срочный</option>
+                </select>
+            </div>
+            <div class="col-sm-9 col-lg-5">
                 <input type="search" name="search" value="@Model.Search" class="form-control form-control-sm"
-                       placeholder="Поиск по задаче, корпусу, автору или исполнителю" aria-label="Поиск" />
+                       placeholder="Поиск по задаче, катеру, автору или исполнителю" aria-label="Поиск" />
             </div>
             <div class="col-auto">
                 <button class="btn btn-sm btn-outline-primary">Показать</button>
             </div>
-            @if (Model.Filter != "active" || Model.Search is not null)
+            @if (Model.Filter != "active" || Model.PriorityFilter is not null || Model.Search is not null)
             {
                 <div class="col-auto">
                     <a asp-page="./Index" class="btn btn-sm btn-outline-secondary">Сбросить</a>
@@ -70,70 +94,122 @@
         <i class="bi bi-clipboard2 fs-3 d-block mb-2 text-muted"></i>
         <strong>Задачи не найдены</strong>
         <div class="text-muted small mt-1">
-            @(Model.Search is not null ? "Измените условия поиска или сбросьте фильтры." : "В выбранном разделе пока нет задач.")
+            @(Model.Search is not null || Model.PriorityFilter is not null ? "Измените условия поиска или сбросьте фильтры." : "В выбранном разделе пока нет задач.")
         </div>
     </div>
 }
 else
 {
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle mb-0">
-                <thead class="table-light">
+    <div class="card engineering-tasks-card">
+        <table class="table table-sm table-hover align-middle mb-0 engineering-tasks">
+            <colgroup>
+                <col class="engineering-col-created" />
+                <col class="engineering-col-task" />
+                <col class="engineering-col-assignee" />
+                <col class="engineering-col-progress" />
+                <col class="engineering-col-deadlines" />
+                <col class="engineering-col-status" />
+                @if (Model.CanEdit) { <col class="engineering-col-actions" /> }
+            </colgroup>
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Поставлено / автор</th>
+                    <th scope="col">Задача / катер</th>
+                    <th scope="col">Исполнитель</th>
+                    <th scope="col">Начало / готово</th>
+                    <th scope="col">План / дедлайн</th>
+                    <th scope="col">Статус</th>
+                    @if (Model.CanEdit) { <th scope="col"><span class="visually-hidden">Действия</span></th> }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var task in Model.Tasks)
+                {
+                    var overdue = Model.IsOverdue(task);
+                    var dueSoon = Model.IsDueSoon(task);
                     <tr>
-                        <th class="text-nowrap">Поставлено</th>
-                        <th style="min-width: 10rem;">Автор задачи</th>
-                        <th style="min-width: 18rem;">Задача</th>
-                        <th style="min-width: 11rem;">Исполнитель</th>
-                        <th class="text-nowrap">Взято в работу</th>
-                        <th class="text-nowrap">План. срок</th>
-                        <th class="text-nowrap">Готово</th>
-                        <th class="text-nowrap">Дедлайн</th>
-                        <th class="text-nowrap">Введено с № корпуса</th>
-                        <th>Статус</th>
-                        @if (Model.CanEdit) { <th></th> }
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var task in Model.Tasks)
-                    {
-                        var overdue = Model.IsOverdue(task);
-                        <tr>
-                            <td class="text-nowrap">@task.CreatedAt.ToString("dd.MM.yyyy")</td>
-                            <td>@task.CreatedByName</td>
-                            <td>@task.Title</td>
-                            <td>
-                                @if (task.Assignee is not null)
+                        <td data-label="Поставлено / автор">
+                            <div class="engineering-primary-date">@task.CreatedAt.ToString("dd.MM.yyyy")</div>
+                            <div class="engineering-author">@task.CreatedByName</div>
+                        </td>
+                        <td data-label="Задача / катер">
+                            <div class="engineering-task-title">@task.Title</div>
+                            <div class="engineering-task-meta">
+                                <span class="badge @Model.PriorityClass(task)">@Model.PriorityText(task)</span>
+                            </div>
+                            <div class="engineering-boat">
+                                <i class="bi bi-water" aria-hidden="true"></i>
+                                @if (task.Boat is not null)
                                 {
-                                    @(string.IsNullOrWhiteSpace(task.Assignee.DisplayName) ? task.Assignee.Email : task.Assignee.DisplayName)
+                                    <span class="fw-semibold">@task.Boat.Number</span>
+                                    @if (!string.IsNullOrWhiteSpace(task.Boat.Name))
+                                    {
+                                        <span>@task.Boat.Name</span>
+                                    }
+                                }
+                                else if (!string.IsNullOrWhiteSpace(task.HullNumber))
+                                {
+                                    <span class="fw-semibold">@task.HullNumber</span>
                                 }
                                 else
                                 {
-                                    <span class="text-muted">Не назначен</span>
+                                    <span class="text-muted">Катер не указан</span>
                                 }
-                            </td>
-                            <td class="text-nowrap">@(task.StartedOn?.ToString("dd.MM.yyyy") ?? "—")</td>
-                            <td class="text-nowrap">@(task.PlannedDueOn?.ToString("dd.MM.yyyy") ?? "—")</td>
-                            <td class="text-nowrap">@(task.CompletedOn?.ToString("dd.MM.yyyy") ?? "—")</td>
-                            <td class="text-nowrap @(overdue ? "table-danger" : "")">
-                                @(task.Deadline?.ToString("dd.MM.yyyy") ?? "—")
-                                @if (overdue)
-                                {
-                                    <span class="badge text-bg-danger ms-1">Просрочено</span>
-                                }
-                            </td>
-                            <td>@(task.HullNumber ?? "—")</td>
-                            <td><span class="badge @Model.StatusClass(task)">@Model.Status(task)</span></td>
-                            @if (Model.CanEdit)
+                            </div>
+                        </td>
+                        <td data-label="Исполнитель" class="engineering-assignee">
+                            @if (task.Assignee is not null)
                             {
-                                <td class="text-end text-nowrap">
-                                    <a asp-page="./Edit" asp-route-id="@task.Id" class="btn btn-sm btn-outline-primary">Изменить</a>
-                                </td>
+                                @(string.IsNullOrWhiteSpace(task.Assignee.DisplayName) ? task.Assignee.Email : task.Assignee.DisplayName)
                             }
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                            else
+                            {
+                                <span class="text-muted">Не назначен</span>
+                            }
+                        </td>
+                        <td data-label="Начало / готово">
+                            <div class="engineering-date-line">
+                                <span class="engineering-date-label">Начато</span>
+                                <span>@(task.StartedOn?.ToString("dd.MM.yyyy") ?? "—")</span>
+                            </div>
+                            <div class="engineering-date-line">
+                                <span class="engineering-date-label">Готово</span>
+                                <span>@(task.CompletedOn?.ToString("dd.MM.yyyy") ?? "—")</span>
+                            </div>
+                        </td>
+                        <td data-label="План / дедлайн">
+                            <div class="engineering-date-line">
+                                <span class="engineering-date-label">План</span>
+                                <span>@(task.PlannedDueOn?.ToString("dd.MM.yyyy") ?? "—")</span>
+                            </div>
+                            <div class="engineering-date-line">
+                                <span class="engineering-date-label">Дедлайн</span>
+                                <span class="@(overdue ? "text-danger fw-semibold" : "")">@(task.Deadline?.ToString("dd.MM.yyyy") ?? "—")</span>
+                            </div>
+                            @if (overdue)
+                            {
+                                <span class="badge text-bg-danger engineering-deadline-badge">Просрочено</span>
+                            }
+                            else if (dueSoon)
+                            {
+                                <span class="badge text-bg-warning engineering-deadline-badge">Срок скоро</span>
+                            }
+                        </td>
+                        <td data-label="Статус">
+                            <span class="badge status-badge @Model.StatusClass(task)">@Model.Status(task)</span>
+                        </td>
+                        @if (Model.CanEdit)
+                        {
+                            <td data-label="Действия" class="engineering-actions">
+                                <a asp-page="./Edit" asp-route-id="@task.Id" class="btn btn-sm btn-outline-primary"
+                                   aria-label="Изменить задачу «@task.Title»">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i><span class="engineering-edit-label"> Изменить</span>
+                                </a>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 }

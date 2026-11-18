@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using WorkTimeTracker.Data;
 using WorkTimeTracker.Models;
@@ -28,7 +29,9 @@ public class IndexModel : PageModel
     }
 
     public List<EngineeringTask> Tasks { get; private set; } = new();
+    public SelectList Boats { get; private set; } = default!;
     public string Filter { get; private set; } = "active";
+    public EngineeringTaskPriority? PriorityFilter { get; private set; }
     public string? Search { get; private set; }
     public bool CanCreate => _currentUser.IsInRole(AppRoles.ProductionHead) || _currentUser.IsInRole(AppRoles.Admin);
     public bool CanEdit => _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
@@ -38,23 +41,31 @@ public class IndexModel : PageModel
     public string Title { get; set; } = string.Empty;
 
     [BindProperty]
-    [StringLength(100, ErrorMessage = "Номер корпуса не может быть длиннее 100 символов.")]
-    public string? HullNumber { get; set; }
+    public EngineeringTaskPriority Priority { get; set; } = EngineeringTaskPriority.Normal;
 
-    public async Task OnGetAsync(string? filter, string? search)
+    [BindProperty]
+    public int? BoatId { get; set; }
+
+    public async Task OnGetAsync(string? filter, EngineeringTaskPriority? priority, string? search)
     {
-        SetFilters(filter, search);
+        SetFilters(filter, priority, search);
+        if (CanCreate) await LoadBoatsAsync();
         await LoadTasksAsync();
     }
 
-    public async Task<IActionResult> OnPostCreateAsync(string? filter, string? search)
+    public async Task<IActionResult> OnPostCreateAsync(string? filter, EngineeringTaskPriority? priority, string? search)
     {
         if (!CanCreate) return Forbid();
-        SetFilters(filter, search);
+        SetFilters(filter, priority, search);
         if (string.IsNullOrWhiteSpace(Title))
             ModelState.AddModelError(nameof(Title), "Укажите название задачи.");
+        if (!Enum.IsDefined(Priority))
+            ModelState.AddModelError(nameof(Priority), "Выберите приоритет задачи.");
+        if (BoatId is { } boatId && !await _db.Boats.AnyAsync(b => b.Id == boatId && b.IsActive))
+            ModelState.AddModelError(nameof(BoatId), "Выберите активный катер из справочника.");
         if (!ModelState.IsValid)
         {
+            await LoadBoatsAsync();
             await LoadTasksAsync();
             return Page();
         }
@@ -72,7 +83,9 @@ public class IndexModel : PageModel
             CreatedByUserId = userId,
             CreatedByName = createdByName,
             Title = Title.Trim(),
-            HullNumber = string.IsNullOrWhiteSpace(HullNumber) ? null : HullNumber.Trim(),
+            Priority = Priority,
+            Status = EngineeringTaskStatus.New,
+            BoatId = BoatId,
         };
         _db.EngineeringTasks.Add(task);
         await _db.SaveChangesAsync();
@@ -86,50 +99,109 @@ public class IndexModel : PageModel
         }
 
         TempData["Success"] = "Задание создано.";
-        return RedirectToPage(new { filter = Filter, search = Search });
+        return RedirectToPage(new { filter = Filter, priority = PriorityFilter, search = Search });
     }
 
     public bool IsOverdue(EngineeringTask task)
-        => task.CompletedOn is null && task.Deadline < DateOnly.FromDateTime(DateTime.Today);
+        => task.Status != EngineeringTaskStatus.Done
+            && task.Deadline is { } deadline
+            && deadline < DateOnly.FromDateTime(DateTime.Today);
 
-    public string Status(EngineeringTask task)
+    public bool IsDueSoon(EngineeringTask task)
     {
-        if (task.CompletedOn is not null) return "Завершено";
-        if (task.StartedOn is not null) return "В работе";
-        if (task.AssigneeId is not null) return "Назначено";
-        return "Новая";
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        return task.Status != EngineeringTaskStatus.Done
+            && task.Deadline is { } deadline
+            && deadline >= today
+            && deadline <= today.AddDays(2);
     }
 
-    public string StatusClass(EngineeringTask task)
+    public string Status(EngineeringTask task) => task.Status switch
     {
-        if (task.CompletedOn is not null) return "text-bg-success";
-        if (IsOverdue(task)) return "text-bg-danger";
-        if (task.StartedOn is not null) return "text-bg-primary";
-        if (task.AssigneeId is not null) return "text-bg-warning";
-        return "text-bg-secondary";
-    }
+        EngineeringTaskStatus.Assigned => "Назначена",
+        EngineeringTaskStatus.InProgress => "В работе",
+        EngineeringTaskStatus.Done => "Готова",
+        _ => "Новая",
+    };
 
-    private void SetFilters(string? filter, string? search)
+    public string StatusClass(EngineeringTask task) => task.Status switch
     {
-        Filter = filter is "completed" or "all" ? filter : "active";
+        EngineeringTaskStatus.Assigned => "text-bg-warning",
+        EngineeringTaskStatus.InProgress => "text-bg-primary",
+        EngineeringTaskStatus.Done => "text-bg-success",
+        _ => "text-bg-secondary",
+    };
+
+    public string PriorityText(EngineeringTask task) => task.Priority switch
+    {
+        EngineeringTaskPriority.Low => "Низкий",
+        EngineeringTaskPriority.High => "Высокий",
+        EngineeringTaskPriority.Urgent => "Срочный",
+        _ => "Обычный",
+    };
+
+    public string PriorityClass(EngineeringTask task) => task.Priority switch
+    {
+        EngineeringTaskPriority.Low => "text-bg-secondary",
+        EngineeringTaskPriority.High => "text-bg-warning",
+        EngineeringTaskPriority.Urgent => "text-bg-danger",
+        _ => "text-bg-info",
+    };
+
+    private void SetFilters(string? filter, EngineeringTaskPriority? priority, string? search)
+    {
+        Filter = filter is "completed" or "all" or "overdue" ? filter : "active";
+        PriorityFilter = priority;
         Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+    }
+
+    private async Task LoadBoatsAsync()
+    {
+        var boats = await _db.Boats.AsNoTracking()
+            .Where(b => b.IsActive)
+            .OrderBy(b => b.Number)
+            .ThenBy(b => b.Name)
+            .ToListAsync();
+        Boats = new SelectList(boats.Select(b => new
+        {
+            b.Id,
+            Text = string.IsNullOrWhiteSpace(b.Name) ? b.Number : $"{b.Number} — {b.Name}",
+        }), "Id", "Text", BoatId);
     }
 
     private async Task LoadTasksAsync()
     {
-        var query = _db.EngineeringTasks.Include(t => t.Assignee).AsNoTracking().AsQueryable();
-        if (Filter == "active") query = query.Where(t => t.CompletedOn == null);
-        if (Filter == "completed") query = query.Where(t => t.CompletedOn != null);
+        var query = _db.EngineeringTasks
+            .Include(t => t.Assignee)
+            .Include(t => t.Boat)
+            .AsNoTracking()
+            .AsQueryable();
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        query = Filter switch
+        {
+            "completed" => query.Where(t => t.Status == EngineeringTaskStatus.Done),
+            "overdue" => query.Where(t => t.Status != EngineeringTaskStatus.Done && t.Deadline < today),
+            "all" => query,
+            _ => query.Where(t => t.Status != EngineeringTaskStatus.Done),
+        };
+        if (PriorityFilter is { } priority) query = query.Where(t => t.Priority == priority);
         if (Search is not null)
         {
             var search = Search.ToLower();
             query = query.Where(t => t.Title.ToLower().Contains(search)
                 || t.CreatedByName.ToLower().Contains(search)
                 || (t.HullNumber != null && t.HullNumber.ToLower().Contains(search))
+                || (t.Boat != null && (t.Boat.Number.ToLower().Contains(search)
+                    || (t.Boat.Name != null && t.Boat.Name.ToLower().Contains(search))))
                 || (t.Assignee != null && (t.Assignee.DisplayName.ToLower().Contains(search)
                     || (t.Assignee.Email != null && t.Assignee.Email.ToLower().Contains(search)))));
         }
 
-        Tasks = await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
+        Tasks = await query
+            .OrderByDescending(t => t.Priority)
+            .ThenBy(t => t.Deadline == null)
+            .ThenBy(t => t.Deadline)
+            .ThenByDescending(t => t.CreatedAt)
+            .ToListAsync();
     }
 }

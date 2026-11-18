@@ -46,23 +46,29 @@ public class EngineeringTaskCreateTests : IDisposable
     }
 
     [Fact]
-    public async Task ProductionHead_CreateTask_SavesAuthorHullAuditAndNotifiesActiveChiefEngineers()
+    public async Task ProductionHead_CreateTask_SavesAuthorBoatPriorityAuditAndNotifiesActiveChiefEngineers()
     {
         var creator = await CreateUserAsync("production-head", AppRoles.ProductionHead, "Начальник производства");
         var firstChief = await CreateUserAsync("chief-one", AppRoles.ChiefEngineer);
         var secondChief = await CreateUserAsync("chief-two", AppRoles.ChiefEngineer);
+        var boat = new Boat { Number = "К-123", Name = "Катер" };
+        _db.Boats.Add(boat);
+        await _db.SaveChangesAsync();
         var model = CreateModel(creator, AppRoles.ProductionHead);
         model.Title = "  Разработать чертёж  ";
-        model.HullNumber = "  К-123  ";
+        model.BoatId = boat.Id;
+        model.Priority = EngineeringTaskPriority.Urgent;
 
-        var result = await model.OnPostCreateAsync(null, null);
+        var result = await model.OnPostCreateAsync(null, null, null);
 
         Assert.IsType<RedirectToPageResult>(result);
         var task = Assert.Single(_db.EngineeringTasks);
         Assert.Equal(creator.Id, task.CreatedByUserId);
         Assert.Equal("Начальник производства", task.CreatedByName);
         Assert.Equal("Разработать чертёж", task.Title);
-        Assert.Equal("К-123", task.HullNumber);
+        Assert.Equal(boat.Id, task.BoatId);
+        Assert.Equal(EngineeringTaskPriority.Urgent, task.Priority);
+        Assert.Equal(EngineeringTaskStatus.New, task.Status);
 
         var audit = Assert.Single(_db.AuditLogs);
         Assert.Equal(creator.Id, audit.UserId);
@@ -86,7 +92,7 @@ public class EngineeringTaskCreateTests : IDisposable
             nameClaim: creator.Email, includeDisplayNameClaim: false);
         model.Title = "Задание с автором из Identity";
 
-        var result = await model.OnPostCreateAsync(null, null);
+        var result = await model.OnPostCreateAsync(null, null, null);
 
         Assert.IsType<RedirectToPageResult>(result);
         var task = Assert.Single(_db.EngineeringTasks);
@@ -103,12 +109,14 @@ public class EngineeringTaskCreateTests : IDisposable
         var model = CreateModel(creator, AppRoles.Admin);
         model.Title = "Задание от администратора";
 
-        var result = await model.OnPostCreateAsync(null, null);
+        var result = await model.OnPostCreateAsync(null, null, null);
 
         Assert.IsType<RedirectToPageResult>(result);
         var task = Assert.Single(_db.EngineeringTasks);
         Assert.Equal(creator.Id, task.CreatedByUserId);
         Assert.Equal("Задание от администратора", task.Title);
+        Assert.Equal(EngineeringTaskPriority.Normal, task.Priority);
+        Assert.Equal(EngineeringTaskStatus.New, task.Status);
     }
 
     [Theory]
@@ -120,7 +128,7 @@ public class EngineeringTaskCreateTests : IDisposable
         var model = CreateModel(creator, role);
         model.Title = "Недоступное задание";
 
-        var result = await model.OnPostCreateAsync(null, null);
+        var result = await model.OnPostCreateAsync(null, null, null);
 
         Assert.IsType<ForbidResult>(result);
         Assert.Empty(_db.EngineeringTasks);
@@ -135,7 +143,7 @@ public class EngineeringTaskCreateTests : IDisposable
         var model = CreateModel(creator, AppRoles.ProductionHead);
         model.Title = "   ";
 
-        var result = await model.OnPostCreateAsync(null, null);
+        var result = await model.OnPostCreateAsync(null, null, null);
 
         Assert.IsType<PageResult>(result);
         Assert.False(model.ModelState.IsValid);
@@ -152,7 +160,7 @@ public class EngineeringTaskCreateTests : IDisposable
         model.Title = new string('З', 1001);
         AddValidationErrorsToModelState(model);
 
-        var result = await model.OnPostCreateAsync(null, null);
+        var result = await model.OnPostCreateAsync(null, null, null);
 
         Assert.IsType<PageResult>(result);
         Assert.False(model.ModelState.IsValid);
@@ -162,18 +170,39 @@ public class EngineeringTaskCreateTests : IDisposable
     }
 
     [Fact]
-    public async Task ProductionHead_CreateTaskWithTooLongHullNumber_DoesNotSaveTask()
+    public async Task ProductionHead_CreateTaskWithInactiveBoat_DoesNotSaveTask()
+    {
+        var creator = await CreateUserAsync("production-head", AppRoles.ProductionHead);
+        var boat = new Boat { Number = "К-123", IsActive = false };
+        _db.Boats.Add(boat);
+        await _db.SaveChangesAsync();
+        var model = CreateModel(creator, AppRoles.ProductionHead);
+        model.Title = "Корректное задание";
+        model.BoatId = boat.Id;
+
+        var result = await model.OnPostCreateAsync(null, null, null);
+
+        Assert.IsType<PageResult>(result);
+        Assert.False(model.ModelState.IsValid);
+        Assert.True(model.ModelState.ContainsKey(nameof(model.BoatId)));
+        Assert.Empty(_db.EngineeringTasks);
+        Assert.Empty(_db.AuditLogs);
+        Assert.Empty(_db.Notifications);
+    }
+
+    [Fact]
+    public async Task ProductionHead_CreateTaskWithInvalidPriority_DoesNotSaveTask()
     {
         var creator = await CreateUserAsync("production-head", AppRoles.ProductionHead);
         var model = CreateModel(creator, AppRoles.ProductionHead);
         model.Title = "Корректное задание";
-        model.HullNumber = new string('К', 101);
-        AddValidationErrorsToModelState(model);
+        model.Priority = (EngineeringTaskPriority)99;
 
-        var result = await model.OnPostCreateAsync(null, null);
+        var result = await model.OnPostCreateAsync(null, null, null);
 
         Assert.IsType<PageResult>(result);
         Assert.False(model.ModelState.IsValid);
+        Assert.True(model.ModelState.ContainsKey(nameof(model.Priority)));
         Assert.Empty(_db.EngineeringTasks);
         Assert.Empty(_db.AuditLogs);
         Assert.Empty(_db.Notifications);
@@ -188,7 +217,7 @@ public class EngineeringTaskCreateTests : IDisposable
         var model = CreateModel(creator, AppRoles.ProductionHead);
         model.Title = "Задание для главных инженеров";
 
-        await model.OnPostCreateAsync(null, null);
+        await model.OnPostCreateAsync(null, null, null);
 
         var notification = Assert.Single(_db.Notifications);
         Assert.Equal(activeChief.Id, notification.UserId);
