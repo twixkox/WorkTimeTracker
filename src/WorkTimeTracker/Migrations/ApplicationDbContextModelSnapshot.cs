@@ -378,6 +378,59 @@ namespace WorkTimeTracker.Migrations
                     b.ToTable("Employees");
                 });
 
+            modelBuilder.Entity("WorkTimeTracker.Models.EngineeringTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssigneeId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("CompletedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("Deadline")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HullNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("PlannedDueOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("StartedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssigneeId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("EngineeringTasks");
+                });
+
             modelBuilder.Entity("WorkTimeTracker.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -589,6 +642,16 @@ namespace WorkTimeTracker.Migrations
                         .IsRequired();
 
                     b.Navigation("Department");
+                });
+
+            modelBuilder.Entity("WorkTimeTracker.Models.EngineeringTask", b =>
+                {
+                    b.HasOne("WorkTimeTracker.Models.ApplicationUser", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Assignee");
                 });
 
             modelBuilder.Entity("WorkTimeTracker.Models.TimeEntry", b =>

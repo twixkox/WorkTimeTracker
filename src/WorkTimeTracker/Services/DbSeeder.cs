@@ -54,7 +54,8 @@ public static class DbSeeder
         var driver = Dept("Водитель", timeOnly: true);
         var painting = Dept("Малярка");
         var welding = Dept("Сварка");
-        foreach (var d in new[] { assembly, carpentry, sewing, dept15, warehouse, driver, painting, welding })
+        var engineering = Dept("Конструкторское бюро");
+        foreach (var d in new[] { assembly, carpentry, sewing, dept15, warehouse, driver, painting, welding, engineering })
             if (d.Id == 0) db.Departments.Add(d);
         await db.SaveChangesAsync();
 

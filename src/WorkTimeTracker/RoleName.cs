@@ -8,6 +8,8 @@ public static class RoleName
         AppRoles.Employee => "Сотрудник",
         AppRoles.SectionMaster => "Мастер участка",
         AppRoles.ProductionHead => "Начальник производства",
+        AppRoles.ChiefEngineer => "Главный инженер",
+        AppRoles.Engineer => "Инженер",
         AppRoles.Admin => "Администратор",
         _ => role,
     };
@@ -17,6 +19,8 @@ public static class RoleName
         "Сотрудник" => AppRoles.Employee,
         "Мастер участка" => AppRoles.SectionMaster,
         "Начальник производства" => AppRoles.ProductionHead,
+        "Главный инженер" => AppRoles.ChiefEngineer,
+        "Инженер" => AppRoles.Engineer,
         "Администратор" => AppRoles.Admin,
         _ => russian,
     };

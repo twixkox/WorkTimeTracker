@@ -21,6 +21,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ApplicationLog> ApplicationLogs => Set<ApplicationLog>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<EngineeringTask> EngineeringTasks => Set<EngineeringTask>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -55,5 +56,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ApplicationLog>()
             .Property(l => l.Category)
             .HasMaxLength(500);
+
+        builder.Entity<EngineeringTask>()
+            .Property(t => t.CreatedByUserId)
+            .HasMaxLength(450);
+        builder.Entity<EngineeringTask>()
+            .Property(t => t.CreatedByName)
+            .HasMaxLength(200);
+        builder.Entity<EngineeringTask>()
+            .Property(t => t.Title)
+            .HasMaxLength(1000);
+        builder.Entity<EngineeringTask>()
+            .Property(t => t.AssigneeId)
+            .HasMaxLength(450);
+        builder.Entity<EngineeringTask>()
+            .Property(t => t.HullNumber)
+            .HasMaxLength(100);
+        builder.Entity<EngineeringTask>()
+            .HasIndex(t => t.CreatedAt);
+        builder.Entity<EngineeringTask>()
+            .HasIndex(t => t.AssigneeId);
+        builder.Entity<EngineeringTask>()
+            .HasOne(t => t.Assignee)
+            .WithMany()
+            .HasForeignKey(t => t.AssigneeId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -10,6 +10,7 @@
     {
         null => null,
         _ when user.IsInRole(AppRoles.Admin) => "/Admin/Index",
+        _ when user.IsInRole(AppRoles.ChiefEngineer) || user.IsInRole(AppRoles.Engineer) => "/Engineering/Index",
         _ when user.IsInRole(AppRoles.ProductionHead) => "/Production/Dashboard",
         _ when user.IsInRole(AppRoles.SectionMaster) => "/Master/Index",
         _ => "/Employee/Index",
@@ -55,6 +56,10 @@
                         @if (user.IsInRole(AppRoles.ProductionHead))
                         {
                             <li class="nav-item"><a class="nav-link" href="/Production/Dashboard">Дашборд</a></li>
+                        }
+                        @if (user.IsInRole(AppRoles.ChiefEngineer) || user.IsInRole(AppRoles.Engineer) || user.IsInRole(AppRoles.ProductionHead) || user.IsInRole(AppRoles.Admin))
+                        {
+                            <li class="nav-item"><a class="nav-link" href="/Engineering/Index">Задачи КБ</a></li>
                         }
                         @if (user.IsInRole(AppRoles.Admin))
                         {

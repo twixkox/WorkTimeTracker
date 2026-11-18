@@ -11,6 +11,8 @@ public class IndexModel : PageModel
     {
         if (User.IsInRole(AppRoles.Admin))
             return RedirectToPage("/Admin/Index");
+        if (User.IsInRole(AppRoles.ChiefEngineer) || User.IsInRole(AppRoles.Engineer))
+            return RedirectToPage("/Engineering/Index");
         if (User.IsInRole(AppRoles.ProductionHead))
             return RedirectToPage("/Production/Dashboard");
         if (User.IsInRole(AppRoles.SectionMaster))

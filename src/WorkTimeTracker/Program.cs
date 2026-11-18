@@ -49,6 +49,7 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Employee", "EmployeeOrMaster");
     options.Conventions.AuthorizeFolder("/Master", "MasterOrAbove");
     options.Conventions.AuthorizeFolder("/Production", "ProductionOrAdmin");
+    options.Conventions.AuthorizeFolder("/Engineering", "EngineeringAccess");
     options.Conventions.AuthorizeFolder("/Admin", AppRoles.Admin);
     // Регистрация новых учётных записей — только для администратора.
     options.Conventions.AuthorizeAreaPage("Identity", "/Account/Register", AppRoles.Admin);
@@ -75,6 +76,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole(AppRoles.SectionMaster, AppRoles.ProductionHead, AppRoles.Admin));
     options.AddPolicy("ProductionOrAdmin", policy =>
         policy.RequireRole(AppRoles.ProductionHead, AppRoles.Admin));
+    options.AddPolicy("EngineeringAccess", policy =>
+        policy.RequireRole(AppRoles.ChiefEngineer, AppRoles.Engineer, AppRoles.ProductionHead, AppRoles.Admin));
 });
 
 builder.Services.AddHttpContextAccessor();

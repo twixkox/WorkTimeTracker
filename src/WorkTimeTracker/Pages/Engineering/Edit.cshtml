@@ -1,0 +1,71 @@
+@page "{id:int}"
+@model WorkTimeTracker.Pages.Engineering.EditModel
+@{
+    ViewData["Title"] = "Редактирование задачи КБ";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h4 class="mb-0">Редактирование задачи КБ</h4>
+    <a asp-page="./Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> К списку</a>
+</div>
+
+@if (Model.Item is not null)
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-3 mb-4 small">
+                <div class="col-md-4">
+                    <div class="text-muted">Поставлено</div>
+                    <strong>@Model.Item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</strong>
+                </div>
+                <div class="col-md-8">
+                    <div class="text-muted">Автор задачи</div>
+                    <strong>@Model.Item.CreatedByName</strong>
+                </div>
+            </div>
+
+            <form method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                <div class="row g-3">
+                    <div class="col-lg-8">
+                        <label asp-for="Title" class="form-label">Задача</label>
+                        <input asp-for="Title" class="form-control" required />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+                    <div class="col-lg-4">
+                        <label asp-for="HullNumber" class="form-label">Введено с № корпуса</label>
+                        <input asp-for="HullNumber" class="form-control" />
+                    </div>
+                    <div class="col-lg-6">
+                        <label asp-for="AssigneeId" class="form-label">Исполнитель</label>
+                        <select asp-for="AssigneeId" asp-items="Model.Engineers" class="form-select">
+                            <option value="">Не назначен</option>
+                        </select>
+                        <span asp-validation-for="AssigneeId" class="text-danger small"></span>
+                        <div class="form-text">В списке только активные пользователи с ролью «Инженер».</div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="StartedOn" class="form-label">Взято в работу</label>
+                        <input asp-for="StartedOn" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="PlannedDueOn" class="form-label">План. срок</label>
+                        <input asp-for="PlannedDueOn" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="CompletedOn" class="form-label">Готово</label>
+                        <input asp-for="CompletedOn" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <label asp-for="Deadline" class="form-label">Дедлайн</label>
+                        <input asp-for="Deadline" type="date" class="form-control" />
+                    </div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-primary"><i class="bi bi-check-lg"></i> Сохранить</button>
+                    <a asp-page="./Index" class="btn btn-outline-secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
