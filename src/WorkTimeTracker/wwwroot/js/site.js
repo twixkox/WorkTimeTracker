@@ -135,16 +135,28 @@ window.workTime = {
         var navbar = document.getElementById('nav');
         if (!navbar) return;
 
+        var togglers = document.querySelectorAll('[data-bs-target="#nav"]');
+        function setNavbarOpen(open) {
+            navbar.classList.toggle('show', open);
+            togglers.forEach(function (toggler) {
+                toggler.setAttribute('aria-expanded', String(open));
+            });
+        }
+
+        togglers.forEach(function (toggler) {
+            toggler.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                setNavbarOpen(!navbar.classList.contains('show'));
+            });
+        });
+
         navbar.addEventListener('click', function (ev) {
             var link = ev.target.closest('a[href]');
             if (!link || !navbar.contains(link) || link.hasAttribute('data-bs-toggle')) return;
             if (!navbar.classList.contains('show')) return;
 
-            var toggler = document.querySelector('[data-bs-target="#nav"]');
-            if (!toggler || window.getComputedStyle(toggler).display === 'none') return;
-            if (!window.bootstrap || !window.bootstrap.Collapse) return;
-
-            window.bootstrap.Collapse.getOrCreateInstance(navbar, { toggle: false }).hide();
+            setNavbarOpen(false);
         });
     }
 
