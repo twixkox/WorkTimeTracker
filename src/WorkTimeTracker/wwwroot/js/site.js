@@ -118,3 +118,39 @@ window.workTime = {
         }
     });
 })();
+
+// Независимые визуальные улучшения; не вмешиваются в формы и пересчёт часов.
+(function () {
+    function initPageUi() {
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (!reduceMotion) {
+            document.querySelectorAll('main.container-xl > *').forEach(function (block, index) {
+                var delay = Math.min(index, 5) * 35;
+                block.style.setProperty('--page-enter-delay', delay + 'ms');
+            });
+        }
+        document.documentElement.classList.add('page-ready');
+
+        var navbar = document.getElementById('nav');
+        if (!navbar) return;
+
+        navbar.addEventListener('click', function (ev) {
+            var link = ev.target.closest('a[href]');
+            if (!link || !navbar.contains(link) || link.hasAttribute('data-bs-toggle')) return;
+            if (!navbar.classList.contains('show')) return;
+
+            var toggler = document.querySelector('[data-bs-target="#nav"]');
+            if (!toggler || window.getComputedStyle(toggler).display === 'none') return;
+            if (!window.bootstrap || !window.bootstrap.Collapse) return;
+
+            window.bootstrap.Collapse.getOrCreateInstance(navbar, { toggle: false }).hide();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPageUi);
+    } else {
+        initPageUi();
+    }
+})();
