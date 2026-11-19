@@ -8,4 +8,7 @@ public class ApplicationUser : IdentityUser
     /// <summary>Отображаемое имя (ФИО).</summary>
     public string DisplayName { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+    public long? TelegramUserId { get; set; }
+    public string? TelegramUsername { get; set; }
+    public DateTime? TelegramLinkedAt { get; set; }
 }

@@ -472,7 +472,7 @@ public class EngineeringTaskEditTests : IDisposable
         var currentUser = new CurrentUserService(
             new HttpContextAccessor { HttpContext = httpContext }, _db);
         var model = new EditModel(_db, _userManager, currentUser,
-            new NotificationService(_db), new AuditService(_db));
+            new EngineeringTaskService(_db, _userManager, new NotificationService(_db), new AuditService(_db)));
         model.TempData = new TempDataDictionary(httpContext, new EngineeringTaskEditTempDataProvider());
         return model;
     }

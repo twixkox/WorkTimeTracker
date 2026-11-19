@@ -239,6 +239,16 @@ namespace WorkTimeTracker.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("TelegramLinkedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TelegramUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TelegramUsername")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
 
@@ -254,6 +264,10 @@ namespace WorkTimeTracker.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("TelegramUserId")
+                        .IsUnique()
+                        .HasFilter("[TelegramUserId] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -391,6 +405,9 @@ namespace WorkTimeTracker.Migrations
                     b.Property<int?>("BoatId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateOnly?>("CompletedOn")
                         .HasColumnType("TEXT");
 
@@ -454,6 +471,87 @@ namespace WorkTimeTracker.Migrations
                     b.ToTable("EngineeringTasks");
                 });
 
+            modelBuilder.Entity("WorkTimeTracker.Models.EngineeringTaskAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EngineeringTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UploadedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EngineeringTaskId");
+
+                    b.ToTable("EngineeringTaskAttachments");
+                });
+
+            modelBuilder.Entity("WorkTimeTracker.Models.EngineeringTaskComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EngineeringTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EngineeringTaskId");
+
+                    b.ToTable("EngineeringTaskComments");
+                });
+
             modelBuilder.Entity("WorkTimeTracker.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -506,6 +604,41 @@ namespace WorkTimeTracker.Migrations
                         .IsUnique();
 
                     b.ToTable("SystemSettings");
+                });
+
+            modelBuilder.Entity("WorkTimeTracker.Models.TelegramLinkCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TelegramLinkCodes");
                 });
 
             modelBuilder.Entity("WorkTimeTracker.Models.TimeEntry", b =>
@@ -684,6 +817,39 @@ namespace WorkTimeTracker.Migrations
                     b.Navigation("Boat");
                 });
 
+            modelBuilder.Entity("WorkTimeTracker.Models.EngineeringTaskAttachment", b =>
+                {
+                    b.HasOne("WorkTimeTracker.Models.EngineeringTask", "EngineeringTask")
+                        .WithMany("Attachments")
+                        .HasForeignKey("EngineeringTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EngineeringTask");
+                });
+
+            modelBuilder.Entity("WorkTimeTracker.Models.EngineeringTaskComment", b =>
+                {
+                    b.HasOne("WorkTimeTracker.Models.EngineeringTask", "EngineeringTask")
+                        .WithMany("Comments")
+                        .HasForeignKey("EngineeringTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EngineeringTask");
+                });
+
+            modelBuilder.Entity("WorkTimeTracker.Models.TelegramLinkCode", b =>
+                {
+                    b.HasOne("WorkTimeTracker.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("WorkTimeTracker.Models.TimeEntry", b =>
                 {
                     b.HasOne("WorkTimeTracker.Models.Boat", "Boat")
@@ -725,6 +891,13 @@ namespace WorkTimeTracker.Migrations
             modelBuilder.Entity("WorkTimeTracker.Models.Employee", b =>
                 {
                     b.Navigation("WorkDays");
+                });
+
+            modelBuilder.Entity("WorkTimeTracker.Models.EngineeringTask", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Comments");
                 });
 
             modelBuilder.Entity("WorkTimeTracker.Models.WorkDay", b =>

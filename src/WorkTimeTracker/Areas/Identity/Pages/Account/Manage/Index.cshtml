@@ -1,2 +1,70 @@
 @page
 @model WorkTimeTracker.Areas.Identity.Pages.Account.Manage.IndexModel
+@{
+    ViewData["Title"] = "Профиль";
+}
+
+<div class="page-heading">
+    <div>
+        <div class="page-eyebrow">Учётная запись</div>
+        <h4 class="mb-1">Профиль</h4>
+        <div class="text-muted small">Безопасность и уведомления в Telegram</div>
+    </div>
+    <a asp-page="./ChangePassword" class="btn btn-outline-secondary"><i class="bi bi-key"></i> Сменить пароль</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <div class="card">
+            <div class="card-header"><strong><i class="bi bi-telegram me-1"></i> Telegram</strong></div>
+            <div class="card-body">
+                @if (Model.Account.TelegramUserId is not null)
+                {
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                        <div>
+                            <div class="mb-2"><span class="badge text-bg-success">Привязан</span></div>
+                            @if (!string.IsNullOrWhiteSpace(Model.Account.TelegramUsername))
+                            {
+                                <div class="fw-semibold">@("@" + Model.Account.TelegramUsername)</div>
+                            }
+                            <div class="text-muted small">ID: @Model.Account.TelegramUserId</div>
+                            @if (Model.Account.TelegramLinkedAt is { } linkedAt)
+                            {
+                                <div class="text-muted small">Привязан: @linkedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                            }
+                        </div>
+                        <form method="post" asp-page-handler="Unlink">
+                            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-link-45deg"></i> Отвязать</button>
+                        </form>
+                    </div>
+                    <div class="form-text mt-3">После отвязки уведомления о задачах КБ перестанут приходить в этот Telegram-аккаунт.</div>
+                }
+                else
+                {
+                    <div class="mb-3"><span class="badge text-bg-secondary">Не привязан</span></div>
+                    <p class="text-muted">Привяжите Telegram, чтобы получать уведомления и работать с задачами КБ через инженерного бота.</p>
+
+                    @if (Model.LinkCode is null)
+                    {
+                        <form method="post" asp-page-handler="GenerateCode">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-key"></i> Получить код привязки</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <div class="mb-2">Ваш одноразовый код:</div>
+                            <div class="display-6 font-monospace fw-semibold mb-3">@Model.LinkCode</div>
+                            <ol class="small mb-0 ps-3">
+                                <li>Откройте инженерного бота в Telegram.</li>
+                                <li>Отправьте команду <code>/start @Model.LinkCode</code>.</li>
+                                <li>Дождитесь подтверждения привязки.</li>
+                            </ol>
+                        </div>
+                        <div class="text-muted small">Код действует 10 минут. При создании нового кода прежний перестаёт работать. Не передавайте код другим пользователям.</div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>

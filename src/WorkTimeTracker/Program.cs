@@ -3,10 +3,12 @@ using System.Text.Unicode;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Telegram.Bot;
 using WorkTimeTracker;
 using WorkTimeTracker.Data;
 using WorkTimeTracker.Models;
 using WorkTimeTracker.Services;
+using WorkTimeTracker.Telegram;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,8 +92,21 @@ builder.Services.AddScoped<MissingTimeSheetNotificationService>();
 builder.Services.AddHostedService<DailyMissingTimeSheetWorker>();
 builder.Services.AddScoped<EngineeringTaskReminderService>();
 builder.Services.AddHostedService<EngineeringTaskReminderWorker>();
+builder.Services.AddScoped<EngineeringTaskService>();
+builder.Services.AddScoped<TelegramLinkService>();
+builder.Services.AddScoped<EngineeringTaskAttachmentService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<ExcelService>();
+
+builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection(TelegramOptions.SectionName));
+var telegramToken = builder.Configuration["Telegram:BotToken"];
+if (!string.IsNullOrWhiteSpace(telegramToken))
+    builder.Services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(telegramToken));
+builder.Services.AddSingleton<ITelegramBotApi, TelegramBotApi>();
+builder.Services.AddSingleton<TelegramConversationStore>();
+builder.Services.AddScoped<ITelegramNotificationSender, TelegramNotificationSender>();
+builder.Services.AddScoped<TelegramUpdateHandler>();
+builder.Services.AddHostedService<TelegramBotWorker>();
 
 var app = builder.Build();
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -15,17 +16,15 @@ public class EditModel : PageModel
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly CurrentUserService _currentUser;
-    private readonly NotificationService _notifications;
-    private readonly AuditService _audit;
+    private readonly EngineeringTaskService _tasks;
 
     public EditModel(ApplicationDbContext db, UserManager<ApplicationUser> userManager,
-        CurrentUserService currentUser, NotificationService notifications, AuditService audit)
+        CurrentUserService currentUser, EngineeringTaskService tasks)
     {
         _db = db;
         _userManager = userManager;
         _currentUser = currentUser;
-        _notifications = notifications;
-        _audit = audit;
+        _tasks = tasks;
     }
 
     public EngineeringTask? Item { get; private set; }
@@ -77,108 +76,38 @@ public class EditModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(int id)
+    public async Task<IActionResult> OnPostAsync(int id, CancellationToken cancellationToken = default)
     {
         if (!CanEdit) return Forbid();
-        Item = await _db.EngineeringTasks.Include(t => t.Assignee).FirstOrDefaultAsync(t => t.Id == id);
+        Item = await _db.EngineeringTasks.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
         if (Item is null) return NotFound();
 
-        var engineers = await GetActiveEngineersAsync();
-        SetEngineers(engineers);
-        var boats = await GetActiveBoatsAsync();
-        SetBoats(boats);
-
-        ApplicationUser? assignee = null;
-        if (!string.IsNullOrWhiteSpace(AssigneeId))
-        {
-            assignee = engineers.FirstOrDefault(u => u.Id == AssigneeId);
-            if (assignee is null)
-                ModelState.AddModelError(nameof(AssigneeId), "Выберите активного пользователя с ролью «Инженер».");
-        }
-        if (BoatId is { } boatId && boats.All(b => b.Id != boatId))
-            ModelState.AddModelError(nameof(BoatId), "Выберите активный корпус из справочника.");
-        if (string.IsNullOrWhiteSpace(Title))
-            ModelState.AddModelError(nameof(Title), "Укажите название задачи.");
-        if (!Enum.IsDefined(Priority))
-            ModelState.AddModelError(nameof(Priority), "Выберите корректный приоритет.");
-        if (!Enum.IsDefined(Status))
-            ModelState.AddModelError(nameof(Status), "Выберите корректный статус.");
-
-        var previousAssigneeId = Item.AssigneeId;
-        var previousStatus = Item.Status;
-        var previousPriority = Item.Priority;
-        var previousDeadline = Item.Deadline;
-        var deadlineChanged = Deadline != previousDeadline;
-        if (deadlineChanged && previousDeadline is not null && string.IsNullOrWhiteSpace(DeadlineChangeComment))
-            ModelState.AddModelError(nameof(DeadlineChangeComment), "Укажите причину изменения дедлайна.");
-
-        var removingAssignee = assignee is null && previousAssigneeId is not null;
-        var nextStatus = Status;
-        if (removingAssignee)
-        {
-            nextStatus = EngineeringTaskStatus.New;
-        }
-        else
-        {
-            if (!IsValidTransition(previousStatus, Status))
-                ModelState.AddModelError(nameof(Status), "Статус можно изменить только на один шаг вперёд или назад.");
-
-            if (assignee is null)
-                nextStatus = EngineeringTaskStatus.New;
-            else if (nextStatus == EngineeringTaskStatus.New)
-                nextStatus = EngineeringTaskStatus.Assigned;
-
-            if (nextStatus != Status && !IsValidTransition(previousStatus, nextStatus))
-                ModelState.AddModelError(nameof(Status), "Недопустимый переход статуса.");
-        }
-        if (nextStatus == EngineeringTaskStatus.Done && assignee is null)
-            ModelState.AddModelError(nameof(Status), "Нельзя завершить задачу без исполнителя.");
+        await LoadEngineersAsync();
+        await LoadBoatsAsync();
         if (!ModelState.IsValid) return Page();
 
-        var previousAssignee = Item.Assignee is null
-            ? "не назначен"
-            : UserName(Item.Assignee);
-        Item.Title = Title.Trim();
-        Item.Priority = Priority;
-        Item.Status = nextStatus;
-        Item.AssigneeId = assignee?.Id;
-        Item.BoatId = BoatId;
-        Item.PlannedDueOn = PlannedDueOn;
-        Item.Deadline = Deadline;
-        ApplyStatusDates(Item, previousStatus, DateOnly.FromDateTime(DateTime.Today));
-        if (deadlineChanged)
+        var userId = _currentUser.UserId;
+        if (userId is null) return Forbid();
+        var roles = _currentUser.User?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray()
+            ?? Array.Empty<string>();
+        var actor = new EngineeringTaskActor(userId, _currentUser.UserName, roles);
+        var input = new EngineeringTaskUpdateInput
         {
-            Item.DeadlineReminderSentOn = null;
-            Item.OverdueReminderSentOn = null;
-        }
-        await _db.SaveChangesAsync();
-
-        var newAssignee = assignee is null ? "не назначен" : UserName(assignee);
-        await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "Updated", "EngineeringTask",
-            Item.Id.ToString(), $"{Item.Title}; исполнитель: {previousAssignee} → {newAssignee}");
-        if (deadlineChanged)
+            Title = Title,
+            Priority = Priority,
+            Status = Status,
+            AssigneeId = AssigneeId,
+            BoatId = BoatId,
+            PlannedDueOn = PlannedDueOn,
+            Deadline = Deadline,
+            DeadlineChangeComment = DeadlineChangeComment,
+        };
+        var result = await _tasks.UpdateAsync(actor, id, input, cancellationToken);
+        if (!result.Success)
         {
-            var comment = string.IsNullOrWhiteSpace(DeadlineChangeComment) ? "не указан" : DeadlineChangeComment.Trim();
-            await _audit.LogAsync(_currentUser.UserId ?? "", _currentUser.UserName, "DeadlineChanged", "EngineeringTask",
-                Item.Id.ToString(), $"Дедлайн: {FormatDate(previousDeadline)} → {FormatDate(Item.Deadline)}; комментарий: {comment}");
-            if (assignee is not null)
-            {
-                await _notifications.NotifyAsync(assignee.Id, "Изменён дедлайн задачи КБ",
-                    $"{Item.Title}. Дедлайн: {FormatDate(previousDeadline)} → {FormatDate(Item.Deadline)}. Комментарий: {comment}",
-                    "/Engineering/Index");
-            }
-        }
-        if (previousPriority != Item.Priority && assignee is not null)
-        {
-            await _notifications.NotifyAsync(assignee.Id, "Изменён приоритет задачи КБ",
-                $"{Item.Title}. Приоритет: {PriorityName(previousPriority)} → {PriorityName(Item.Priority)}.",
-                "/Engineering/Index");
-        }
-        if (assignee is not null && previousAssigneeId != assignee.Id)
-        {
-            var deadline = Item.Deadline is { } date ? $" Дедлайн: {date:dd.MM.yyyy}." : string.Empty;
-            await _notifications.NotifyAsync(assignee.Id, "Вам назначена задача КБ",
-                $"{Item.Title}.{deadline}", "/Engineering/Index");
+            ModelState.AddModelError(result.Field ?? string.Empty,
+                result.Error ?? "Не удалось сохранить задачу.");
+            return Page();
         }
 
         TempData["Success"] = "Задача сохранена.";
@@ -202,34 +131,6 @@ public class EditModel : PageModel
         EngineeringTaskStatus.Done => "Готова",
         _ => status.ToString()
     };
-
-    private static bool IsValidTransition(EngineeringTaskStatus current, EngineeringTaskStatus next)
-        => next == current || (int)next == (int)current + 1 || (int)next == (int)current - 1;
-
-    private static void ApplyStatusDates(EngineeringTask item, EngineeringTaskStatus previousStatus, DateOnly today)
-    {
-        if (item.Status == EngineeringTaskStatus.InProgress && previousStatus != EngineeringTaskStatus.InProgress)
-            item.StartedOn ??= today;
-        if (item.Status == EngineeringTaskStatus.Done && previousStatus != EngineeringTaskStatus.Done)
-        {
-            item.StartedOn ??= today;
-            item.CompletedOn = today;
-        }
-        if (previousStatus == EngineeringTaskStatus.Done && item.Status != EngineeringTaskStatus.Done)
-            item.CompletedOn = null;
-        if (previousStatus == EngineeringTaskStatus.InProgress && item.Status < EngineeringTaskStatus.InProgress)
-        {
-            item.StartedOn = null;
-            item.CompletedOn = null;
-        }
-        if (item.Status == EngineeringTaskStatus.New)
-        {
-            item.StartedOn = null;
-            item.CompletedOn = null;
-        }
-    }
-
-    private static string FormatDate(DateOnly? date) => date?.ToString("dd.MM.yyyy") ?? "не задан";
 
     private async Task LoadEngineersAsync() => SetEngineers(await GetActiveEngineersAsync());
 

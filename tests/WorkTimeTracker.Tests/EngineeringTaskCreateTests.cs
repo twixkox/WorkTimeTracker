@@ -58,6 +58,7 @@ public class EngineeringTaskCreateTests : IDisposable
         model.Title = "  Разработать чертёж  ";
         model.BoatId = boat.Id;
         model.Priority = EngineeringTaskPriority.Urgent;
+        model.Deadline = new DateOnly(2026, 12, 15);
 
         var result = await model.OnPostCreateAsync(null, null, null);
 
@@ -68,6 +69,7 @@ public class EngineeringTaskCreateTests : IDisposable
         Assert.Equal("Разработать чертёж", task.Title);
         Assert.Equal(boat.Id, task.BoatId);
         Assert.Equal(EngineeringTaskPriority.Urgent, task.Priority);
+        Assert.Equal(new DateOnly(2026, 12, 15), task.Deadline);
         Assert.Equal(EngineeringTaskStatus.New, task.Status);
 
         var audit = Assert.Single(_db.AuditLogs);
@@ -103,6 +105,22 @@ public class EngineeringTaskCreateTests : IDisposable
     }
 
     [Fact]
+    public async Task ChiefEngineer_CreateTask_SavesTask()
+    {
+        var creator = await CreateUserAsync("chief-creator", AppRoles.ChiefEngineer);
+        var model = CreateModel(creator, AppRoles.ChiefEngineer);
+        model.Title = "Задание от главного инженера";
+
+        var result = await model.OnPostCreateAsync(null, null, null);
+
+        Assert.IsType<RedirectToPageResult>(result);
+        var task = Assert.Single(_db.EngineeringTasks);
+        Assert.Equal(creator.Id, task.CreatedByUserId);
+        Assert.Equal("Задание от главного инженера", task.Title);
+        Assert.Equal(EngineeringTaskStatus.New, task.Status);
+    }
+
+    [Fact]
     public async Task Admin_CreateTask_SavesTask()
     {
         var creator = await CreateUserAsync("admin", AppRoles.Admin);
@@ -119,13 +137,11 @@ public class EngineeringTaskCreateTests : IDisposable
         Assert.Equal(EngineeringTaskStatus.New, task.Status);
     }
 
-    [Theory]
-    [InlineData(AppRoles.Engineer)]
-    [InlineData(AppRoles.ChiefEngineer)]
-    public async Task EngineerOrChiefEngineer_CreateTask_ReturnsForbid(string role)
+    [Fact]
+    public async Task Engineer_CreateTask_ReturnsForbid()
     {
-        var creator = await CreateUserAsync("forbidden-user", role);
-        var model = CreateModel(creator, role);
+        var creator = await CreateUserAsync("forbidden-user", AppRoles.Engineer);
+        var model = CreateModel(creator, AppRoles.Engineer);
         model.Title = "Недоступное задание";
 
         var result = await model.OnPostCreateAsync(null, null, null);
@@ -260,7 +276,7 @@ public class EngineeringTaskCreateTests : IDisposable
         };
         var currentUser = new CurrentUserService(new HttpContextAccessor { HttpContext = httpContext }, _db);
         var model = new IndexModel(_db, _userManager, currentUser,
-            new NotificationService(_db), new AuditService(_db));
+            new EngineeringTaskService(_db, _userManager, new NotificationService(_db), new AuditService(_db)));
         model.TempData = new TempDataDictionary(httpContext, new TestTempDataProvider());
         return model;
     }

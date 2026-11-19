@@ -19,7 +19,7 @@
         <div class="card-body">
             <form method="post" asp-page-handler="Create" class="row g-3 align-items-end">
                 <input type="hidden" name="filter" value="@Model.Filter" />
-                <input type="hidden" name="priority" value="@(Model.PriorityFilter is { } priority ? ((int)priority).ToString() : "")" />
+                <input type="hidden" name="priorityFilter" value="@(Model.PriorityFilter is { } priority ? ((int)priority).ToString() : "")" />
                 <input type="hidden" name="search" value="@Model.Search" />
                 <div class="col-lg-5">
                     <label asp-for="Title" class="form-label">Задача</label>
@@ -42,6 +42,11 @@
                         <option value="3">Срочный</option>
                     </select>
                     <span asp-validation-for="Priority" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <label asp-for="Deadline" class="form-label">Дедлайн <span class="text-muted fw-normal">(необязательно)</span></label>
+                    <input asp-for="Deadline" type="date" class="form-control" />
+                    <span asp-validation-for="Deadline" class="text-danger small"></span>
                 </div>
                 <div class="col-md-3 col-lg-2 d-grid">
                     <button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Создать</button>
@@ -133,7 +138,9 @@ else
                             <div class="engineering-author">@task.CreatedByName</div>
                         </td>
                         <td data-label="Задача / катер">
-                            <div class="engineering-task-title">@task.Title</div>
+                            <div class="engineering-task-title">
+                                <a asp-page="./Details" asp-route-id="@task.Id" class="text-reset text-decoration-none">@task.Title</a>
+                            </div>
                             <div class="engineering-task-meta">
                                 <span class="badge @Model.PriorityClass(task)">@Model.PriorityText(task)</span>
                             </div>

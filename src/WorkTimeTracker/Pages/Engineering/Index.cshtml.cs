@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -15,17 +16,15 @@ public class IndexModel : PageModel
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly CurrentUserService _currentUser;
-    private readonly NotificationService _notifications;
-    private readonly AuditService _audit;
+    private readonly EngineeringTaskService _tasks;
 
     public IndexModel(ApplicationDbContext db, UserManager<ApplicationUser> userManager,
-        CurrentUserService currentUser, NotificationService notifications, AuditService audit)
+        CurrentUserService currentUser, EngineeringTaskService tasks)
     {
         _db = db;
         _userManager = userManager;
         _currentUser = currentUser;
-        _notifications = notifications;
-        _audit = audit;
+        _tasks = tasks;
     }
 
     public List<EngineeringTask> Tasks { get; private set; } = new();
@@ -33,7 +32,9 @@ public class IndexModel : PageModel
     public string Filter { get; private set; } = "active";
     public EngineeringTaskPriority? PriorityFilter { get; private set; }
     public string? Search { get; private set; }
-    public bool CanCreate => _currentUser.IsInRole(AppRoles.ProductionHead) || _currentUser.IsInRole(AppRoles.Admin);
+    public bool CanCreate => _currentUser.IsInRole(AppRoles.ProductionHead)
+        || _currentUser.IsInRole(AppRoles.ChiefEngineer)
+        || _currentUser.IsInRole(AppRoles.Admin);
     public bool CanEdit => _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
 
     [BindProperty]
@@ -46,6 +47,9 @@ public class IndexModel : PageModel
     [BindProperty]
     public int? BoatId { get; set; }
 
+    [BindProperty]
+    public DateOnly? Deadline { get; set; }
+
     public async Task OnGetAsync(string? filter, EngineeringTaskPriority? priority, string? search)
     {
         SetFilters(filter, priority, search);
@@ -53,10 +57,11 @@ public class IndexModel : PageModel
         await LoadTasksAsync();
     }
 
-    public async Task<IActionResult> OnPostCreateAsync(string? filter, EngineeringTaskPriority? priority, string? search)
+    public async Task<IActionResult> OnPostCreateAsync(string? filter, EngineeringTaskPriority? priorityFilter,
+        string? search, CancellationToken cancellationToken = default)
     {
         if (!CanCreate) return Forbid();
-        SetFilters(filter, priority, search);
+        SetFilters(filter, priorityFilter, search);
         if (string.IsNullOrWhiteSpace(Title))
             ModelState.AddModelError(nameof(Title), "Укажите название задачи.");
         if (!Enum.IsDefined(Priority))
@@ -76,26 +81,18 @@ public class IndexModel : PageModel
         var createdByName = !string.IsNullOrWhiteSpace(creator?.DisplayName)
             ? creator.DisplayName
             : _currentUser.UserName;
-
-        var task = new EngineeringTask
+        var roles = _currentUser.User?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray()
+            ?? Array.Empty<string>();
+        var actor = new EngineeringTaskActor(userId, createdByName, roles);
+        var result = await _tasks.CreateAsync(actor, Title.Trim(), Priority, BoatId,
+            null, Deadline, cancellationToken);
+        if (!result.Success)
         {
-            CreatedAt = DateTime.Now,
-            CreatedByUserId = userId,
-            CreatedByName = createdByName,
-            Title = Title.Trim(),
-            Priority = Priority,
-            Status = EngineeringTaskStatus.New,
-            BoatId = BoatId,
-        };
-        _db.EngineeringTasks.Add(task);
-        await _db.SaveChangesAsync();
-        await _audit.LogAsync(userId, _currentUser.UserName, "Created", "EngineeringTask", task.Id.ToString(), task.Title);
-
-        var chiefEngineers = await _userManager.GetUsersInRoleAsync(AppRoles.ChiefEngineer);
-        foreach (var user in chiefEngineers.Where(u => u.IsActive))
-        {
-            await _notifications.NotifyAsync(user.Id, "Новое задание КБ",
-                $"{createdByName}: {task.Title}", $"/Engineering/Edit/{task.Id}");
+            ModelState.AddModelError(result.Field ?? string.Empty,
+                result.Error ?? "Не удалось создать задание.");
+            await LoadBoatsAsync();
+            await LoadTasksAsync();
+            return Page();
         }
 
         TempData["Success"] = "Задание создано.";

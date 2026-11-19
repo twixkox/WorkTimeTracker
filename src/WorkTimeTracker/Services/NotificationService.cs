@@ -1,15 +1,24 @@
 using Microsoft.EntityFrameworkCore;
 using WorkTimeTracker.Data;
 using WorkTimeTracker.Models;
+using WorkTimeTracker.Telegram;
 
 namespace WorkTimeTracker.Services;
 
-/// <summary>Внутрисистемные уведомления.</summary>
+/// <summary>Внутрисистемные и Telegram-уведомления.</summary>
 public class NotificationService
 {
     private readonly ApplicationDbContext _db;
+    private readonly ITelegramNotificationSender? _telegramSender;
+    private readonly ILogger<NotificationService>? _logger;
 
-    public NotificationService(ApplicationDbContext db) => _db = db;
+    public NotificationService(ApplicationDbContext db, ITelegramNotificationSender? telegramSender = null,
+        ILogger<NotificationService>? logger = null)
+    {
+        _db = db;
+        _telegramSender = telegramSender;
+        _logger = logger;
+    }
 
     public async Task NotifyAsync(string userId, string title, string message, string? link = null)
     {
@@ -21,6 +30,20 @@ public class NotificationService
             Link = link,
         });
         await _db.SaveChangesAsync();
+
+        if (_telegramSender is null) return;
+
+        try
+        {
+            var user = await _db.Users.SingleOrDefaultAsync(u => u.Id == userId);
+            if (user?.TelegramUserId is null) return;
+
+            await _telegramSender.SendAsync(user, title, message, link);
+        }
+        catch (Exception exception)
+        {
+            _logger?.LogError(exception, "Не удалось отправить Telegram-уведомление пользователю {UserId}", userId);
+        }
     }
 
     public async Task<IReadOnlyList<Notification>> GetForUserAsync(string userId, int take = 20)

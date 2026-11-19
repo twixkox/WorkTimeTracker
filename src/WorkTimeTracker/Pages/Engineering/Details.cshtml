@@ -1,0 +1,186 @@
+@page "{id:int}"
+@model WorkTimeTracker.Pages.Engineering.DetailsModel
+@{
+    ViewData["Title"] = "Задача КБ";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <div class="page-eyebrow">Конструкторское бюро</div>
+        <h4 class="mb-0">Задача №@Model.Item.Id</h4>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        @if (Model.CanEdit)
+        {
+            <a asp-page="./Edit" asp-route-id="@Model.Item.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Изменить</a>
+        }
+        <a asp-page="./Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> К списку</a>
+    </div>
+</div>
+
+<div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+            <h5 class="mb-0">@Model.Item.Title</h5>
+            <div class="d-flex gap-1">
+                <span class="badge text-bg-info">@EditModel.PriorityName(Model.Item.Priority)</span>
+                <span class="badge text-bg-secondary">@EditModel.StatusName(Model.Item.Status)</span>
+            </div>
+        </div>
+
+        <div class="row g-3 small">
+            <div class="col-md-6 col-lg-4">
+                <div class="text-muted">Автор</div>
+                <div class="fw-semibold">@Model.Item.CreatedByName</div>
+                <div>@Model.Item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="text-muted">Исполнитель</div>
+                <div class="fw-semibold">
+                    @(Model.Item.Assignee is null ? "Не назначен" : string.IsNullOrWhiteSpace(Model.Item.Assignee.DisplayName) ? Model.Item.Assignee.Email : Model.Item.Assignee.DisplayName)
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="text-muted">Катер / корпус</div>
+                @if (Model.Item.Boat is not null)
+                {
+                    <div class="fw-semibold">@Model.Item.Boat.Number</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Item.Boat.Name))
+                    {
+                        <div>@Model.Item.Boat.Name</div>
+                    }
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Item.HullNumber))
+                {
+                    <div class="fw-semibold">@Model.Item.HullNumber</div>
+                }
+                @if (Model.Item.Boat is null && string.IsNullOrWhiteSpace(Model.Item.HullNumber))
+                {
+                    <div>Не указан</div>
+                }
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="text-muted">Плановый срок</div>
+                <div class="fw-semibold">@(Model.Item.PlannedDueOn?.ToString("dd.MM.yyyy") ?? "—")</div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="text-muted">Дедлайн</div>
+                <div class="fw-semibold">@(Model.Item.Deadline?.ToString("dd.MM.yyyy") ?? "—")</div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="text-muted">Взято в работу</div>
+                <div class="fw-semibold">@(Model.Item.StartedOn?.ToString("dd.MM.yyyy") ?? "—")</div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="text-muted">Завершено</div>
+                <div class="fw-semibold">@(Model.Item.CompletedAt?.ToString("dd.MM.yyyy HH:mm") ?? Model.Item.CompletedOn?.ToString("dd.MM.yyyy") ?? "—")</div>
+            </div>
+        </div>
+
+        @if (Model.CanStart || Model.CanComplete || Model.CanSetPlannedDue)
+        {
+            <hr />
+            <div class="d-flex flex-wrap align-items-end gap-2">
+                @if (Model.CanSetPlannedDue)
+                {
+                    <form method="post" asp-page-handler="SetPlannedDue" asp-route-id="@Model.Item.Id" class="d-flex flex-wrap align-items-end gap-2">
+                        <div>
+                            <label asp-for="PlannedDueOn" class="form-label">Плановый срок</label>
+                            <input asp-for="PlannedDueOn" type="date" class="form-control" />
+                            <span asp-validation-for="PlannedDueOn" class="text-danger small"></span>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary">Сохранить срок</button>
+                    </form>
+                }
+                @if (Model.CanStart)
+                {
+                    <form method="post" asp-page-handler="Start" asp-route-id="@Model.Item.Id">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-play-fill"></i> Взять в работу</button>
+                    </form>
+                }
+                @if (Model.CanComplete)
+                {
+                    <form method="post" asp-page-handler="Complete" asp-route-id="@Model.Item.Id">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-check-lg"></i> Выполнить</button>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header"><strong>Комментарии</strong> <span class="badge text-bg-light">@Model.Item.Comments.Count</span></div>
+            <div class="card-body">
+                @if (Model.Item.Comments.Any())
+                {
+                    <div class="mb-4">
+                        @foreach (var comment in Model.Item.Comments.OrderBy(c => c.CreatedAt))
+                        {
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex flex-wrap justify-content-between gap-2 mb-1">
+                                    <strong>@comment.AuthorName</strong>
+                                    <span class="text-muted small">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                                </div>
+                                <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@comment.Text</div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Комментариев пока нет.</p>
+                }
+
+                <form method="post" asp-page-handler="AddComment" asp-route-id="@Model.Item.Id">
+                    <label asp-for="CommentText" class="form-label">Новый комментарий</label>
+                    <textarea asp-for="CommentText" class="form-control" rows="3" maxlength="4000" placeholder="Добавьте уточнение или сообщите о ходе работ"></textarea>
+                    <span asp-validation-for="CommentText" class="text-danger small"></span>
+                    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-chat-left-text"></i> Добавить комментарий</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><strong>Вложения</strong> <span class="badge text-bg-light">@Model.Item.Attachments.Count</span></div>
+            <div class="card-body">
+                @if (Model.Item.Attachments.Any())
+                {
+                    <div class="list-group list-group-flush mb-3">
+                        @foreach (var attachment in Model.Item.Attachments.OrderByDescending(a => a.CreatedAt))
+                        {
+                            <div class="list-group-item px-0">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-paperclip mt-1"></i>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <a asp-page-handler="Download" asp-route-id="@Model.Item.Id" asp-route-attachmentId="@attachment.Id" class="text-break">@attachment.FileName</a>
+                                        <div class="text-muted small">@DetailsModel.FormatSize(attachment.Size) · @attachment.UploadedByName</div>
+                                        <div class="text-muted small">@attachment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Вложений пока нет.</p>
+                }
+
+                <form method="post" asp-page-handler="AddAttachment" asp-route-id="@Model.Item.Id" enctype="multipart/form-data">
+                    <label asp-for="Attachment" class="form-label">Добавить файл</label>
+                    <input asp-for="Attachment" type="file" class="form-control" />
+                    <span asp-validation-for="Attachment" class="text-danger small"></span>
+                    <div class="form-text">Максимальный размер — 20 МиБ.</div>
+                    <button type="submit" class="btn btn-outline-primary mt-2"><i class="bi bi-upload"></i> Загрузить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+

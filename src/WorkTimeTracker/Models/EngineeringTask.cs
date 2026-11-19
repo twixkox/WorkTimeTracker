@@ -30,10 +30,13 @@ public class EngineeringTask
     public DateOnly? StartedOn { get; set; }
     public DateOnly? PlannedDueOn { get; set; }
     public DateOnly? CompletedOn { get; set; }
+    public DateTime? CompletedAt { get; set; }
     public DateOnly? Deadline { get; set; }
     public DateOnly? DeadlineReminderSentOn { get; set; }
     public DateOnly? OverdueReminderSentOn { get; set; }
     public int? BoatId { get; set; }
     public Boat? Boat { get; set; }
     public string? HullNumber { get; set; }
+    public ICollection<EngineeringTaskComment> Comments { get; set; } = new List<EngineeringTaskComment>();
+    public ICollection<EngineeringTaskAttachment> Attachments { get; set; } = new List<EngineeringTaskAttachment>();
 }
