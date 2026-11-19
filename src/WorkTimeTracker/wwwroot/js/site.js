@@ -143,14 +143,6 @@ window.workTime = {
             });
         }
 
-        togglers.forEach(function (toggler) {
-            toggler.addEventListener('click', function (ev) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                setNavbarOpen(!navbar.classList.contains('show'));
-            });
-        });
-
         navbar.addEventListener('click', function (ev) {
             var link = ev.target.closest('a[href]');
             if (!link || !navbar.contains(link) || link.hasAttribute('data-bs-toggle')) return;

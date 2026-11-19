@@ -66,6 +66,7 @@
                         </a>
                         <button class="navbar-toggler ms-2" type="button"
                                 data-bs-toggle="collapse" data-bs-target="#nav"
+                                onclick="var nav = document.getElementById('nav'); var open = nav.classList.toggle('show'); this.setAttribute('aria-expanded', String(open)); event.preventDefault(); event.stopImmediatePropagation();"
                                 aria-controls="nav" aria-expanded="false" aria-label="Открыть меню навигации">
                             <span class="navbar-toggler-icon" aria-hidden="true"></span>
                         </button>
