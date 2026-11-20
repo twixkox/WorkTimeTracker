@@ -13,7 +13,22 @@
         <span>—</span>
         <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
         <button class="btn btn-sm btn-primary">Показать</button>
+        <a asp-page="./Index" asp-route-reset="1" class="btn btn-sm btn-outline-secondary">Сбросить</a>
     </form>
+</div>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 no-print">
+    <span class="small text-muted">Быстрый период:</span>
+    <a asp-page="./Index" asp-route-from="@Model.Today.ToString("yyyy-MM-dd")" asp-route-to="@Model.Today.ToString("yyyy-MM-dd")"
+       class="btn btn-sm btn-outline-primary rounded-pill">Сегодня</a>
+    <a asp-page="./Index" asp-route-from="@Model.WeekFrom.ToString("yyyy-MM-dd")" asp-route-to="@Model.WeekTo.ToString("yyyy-MM-dd")"
+       class="btn btn-sm btn-outline-primary rounded-pill">Неделя</a>
+    <a asp-page="./Index" asp-route-from="@Model.MonthFrom.ToString("yyyy-MM-dd")" asp-route-to="@Model.MonthTo.ToString("yyyy-MM-dd")"
+       class="btn btn-sm btn-outline-primary rounded-pill">Месяц</a>
+    @if (Model.FiltersRestored)
+    {
+        <span class="badge text-bg-light border rounded-pill"><i class="bi bi-bookmark-check"></i> Сохранённый период</span>
+    }
 </div>
 
 <div class="d-flex gap-2 mb-3 no-print">

@@ -58,7 +58,9 @@ else if (!isTimeOnly && Model.Day?.Status == WorkTimeTracker.Models.TimeSheetSta
 
 <div class="card">
     <div class="card-body">
-        <form method="post">
+        <form method="post" data-workday-form="day" data-user-id="@Model.Employee?.UserId"
+              data-date="@Model.Input.Date.ToString("yyyy-MM-dd")" data-can-edit="@(Model.CanEdit ? "true" : "false")"
+              data-request-method="@ViewContext.HttpContext.Request.Method">
             <partial name="_DayForm" model="new DayFormPartialModel {
                 Day = Model.Input,
                 Boats = Model.Boats,

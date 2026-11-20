@@ -44,7 +44,10 @@
                     @(existing?.Status == TimeSheetStatus.Submitted ? "На утверждении у мастера — редактирование недоступно." : "Табель утверждён.")
                 </div>
             }
-            <form method="post" action="/Employee/Day?date=@day.Date.ToString("yyyy-MM-dd")">
+            <form method="post" action="/Employee/Day?date=@day.Date.ToString("yyyy-MM-dd")"
+                  data-workday-form="week" data-user-id="@Model.Employee?.UserId"
+                  data-week="@Model.WeekStart.ToString("yyyy-MM-dd")" data-date="@day.Date.ToString("yyyy-MM-dd")"
+                  data-can-edit="@(editable ? "true" : "false")" data-request-method="@ViewContext.HttpContext.Request.Method">
                 <partial name="_DayForm" model="new DayFormPartialModel {
                     Day = day,
                     Boats = Model.Boats,

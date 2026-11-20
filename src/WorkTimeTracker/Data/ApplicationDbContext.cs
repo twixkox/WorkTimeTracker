@@ -23,6 +23,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<EngineeringTask> EngineeringTasks => Set<EngineeringTask>();
     public DbSet<TelegramLinkCode> TelegramLinkCodes => Set<TelegramLinkCode>();
+    public DbSet<UserRoleScope> UserRoleScopes => Set<UserRoleScope>();
     public DbSet<EngineeringTaskComment> EngineeringTaskComments => Set<EngineeringTaskComment>();
     public DbSet<EngineeringTaskAttachment> EngineeringTaskAttachments => Set<EngineeringTaskAttachment>();
 
@@ -59,6 +60,31 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<ApplicationLog>()
             .Property(l => l.Category)
             .HasMaxLength(500);
+
+        builder.Entity<UserRoleScope>()
+            .Property(s => s.UserId)
+            .HasMaxLength(450);
+        builder.Entity<UserRoleScope>()
+            .Property(s => s.RoleId)
+            .HasMaxLength(450);
+        builder.Entity<UserRoleScope>()
+            .HasIndex(s => new { s.UserId, s.RoleId, s.Scope, s.DepartmentId })
+            .IsUnique();
+        builder.Entity<UserRoleScope>()
+            .HasOne(s => s.User)
+            .WithMany()
+            .HasForeignKey(s => s.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<UserRoleScope>()
+            .HasOne(s => s.Role)
+            .WithMany()
+            .HasForeignKey(s => s.RoleId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<UserRoleScope>()
+            .HasOne(s => s.Department)
+            .WithMany()
+            .HasForeignKey(s => s.DepartmentId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.Entity<EngineeringTask>()
             .Property(t => t.CreatedByUserId)

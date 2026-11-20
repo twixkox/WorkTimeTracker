@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using Telegram.Bot;
 using WorkTimeTracker;
 using WorkTimeTracker.Data;
 using WorkTimeTracker.Models;
+using WorkTimeTracker.Security;
 using WorkTimeTracker.Services;
 using WorkTimeTracker.Telegram;
 
@@ -52,9 +54,9 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Master", "MasterOrAbove");
     options.Conventions.AuthorizeFolder("/Production", "ProductionOrAdmin");
     options.Conventions.AuthorizeFolder("/Engineering", "EngineeringAccess");
-    options.Conventions.AuthorizeFolder("/Admin", AppRoles.Admin);
+    options.Conventions.AuthorizeFolder("/Admin", "AdministrationAccess");
     // Регистрация новых учётных записей — только для администратора.
-    options.Conventions.AuthorizeAreaPage("Identity", "/Account/Register", AppRoles.Admin);
+    options.Conventions.AuthorizeAreaPage("Identity", "/Account/Register", "AdministrationAccess");
 })
 .AddMvcOptions(options =>
 {
@@ -73,21 +75,29 @@ builder.Services.AddAuthorization(options =>
     foreach (var role in AppRoles.All)
         options.AddPolicy(role, policy => policy.RequireRole(role));
     options.AddPolicy("EmployeeOrMaster", policy =>
-        policy.RequireRole(AppRoles.Employee, AppRoles.SectionMaster));
+        policy.Requirements.Add(new PermissionRequirement(AppPermissions.TimeSheetsSubmit)));
     options.AddPolicy("MasterOrAbove", policy =>
-        policy.RequireRole(AppRoles.SectionMaster, AppRoles.ProductionHead, AppRoles.Admin));
+        policy.Requirements.Add(new PermissionRequirement(AppPermissions.TimeSheetsApprove)));
     options.AddPolicy("ProductionOrAdmin", policy =>
-        policy.RequireRole(AppRoles.ProductionHead, AppRoles.Admin));
+        policy.Requirements.Add(new PermissionRequirement(AppPermissions.ProductionView)));
     options.AddPolicy("EngineeringAccess", policy =>
-        policy.RequireRole(AppRoles.ChiefEngineer, AppRoles.Engineer, AppRoles.ProductionHead, AppRoles.Admin));
+        policy.Requirements.Add(new PermissionRequirement(AppPermissions.EngineeringView)));
+    options.AddPolicy("AdministrationAccess", policy =>
+        policy.Requirements.Add(new PermissionRequirement(AppPermissions.AdministrationAccess)));
 });
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ILoggerProvider, DatabaseLoggerProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<CurrentUserService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<NotificationPreferenceService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<SavedFilterService>();
+builder.Services.AddScoped<PersonalDashboardService>();
+builder.Services.AddScoped<BulkTimeSheetApprovalService>();
 builder.Services.AddScoped<MissingTimeSheetNotificationService>();
 builder.Services.AddHostedService<DailyMissingTimeSheetWorker>();
 builder.Services.AddScoped<EngineeringTaskReminderService>();

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WorkTimeTracker.Data;
 using WorkTimeTracker.Models;
 using WorkTimeTracker.Pages.Employee;
+using WorkTimeTracker.Security;
 using WorkTimeTracker.Services;
 
 namespace WorkTimeTracker.Pages.Master;
@@ -15,15 +16,17 @@ public class DayModel : PageModel
     private readonly SettingsService _settings;
     private readonly AuditService _audit;
     private readonly NotificationService _notifications;
+    private readonly IAccessService? _access;
 
     public DayModel(ApplicationDbContext db, CurrentUserService currentUser, SettingsService settings,
-        AuditService audit, NotificationService notifications)
+        AuditService audit, NotificationService notifications, IAccessService? access = null)
     {
         _db = db;
         _currentUser = currentUser;
         _settings = settings;
         _audit = audit;
         _notifications = notifications;
+        _access = access;
     }
 
     [BindProperty]
@@ -52,6 +55,7 @@ public class DayModel : PageModel
     {
         if (!await LoadAsync(employeeId, date)) return Forbid();
         if (Day is null or { Id: 0 } || Employee is null) return NotFound();
+        if (!await HasAccessAsync(AppPermissions.TimeSheetsApprove, Employee.DepartmentId)) return Forbid();
 
         if (IsSectionMaster && Employee.DepartmentId != (await _currentUser.GetEmployeeAsync())?.DepartmentId)
             return Forbid();
@@ -77,6 +81,7 @@ public class DayModel : PageModel
     {
         if (!await LoadAsync(employeeId, date)) return Forbid();
         if (Day is null or { Id: 0 } || Employee is null) return NotFound();
+        if (!await HasAccessAsync(AppPermissions.TimeSheetsApprove, Employee.DepartmentId)) return Forbid();
 
         if (IsSectionMaster && Employee.DepartmentId != (await _currentUser.GetEmployeeAsync())?.DepartmentId)
             return Forbid();
@@ -105,6 +110,7 @@ public class DayModel : PageModel
     {
         if (!await LoadAsync(employeeId, date)) return Forbid();
         if (Day is null || Employee is null) return NotFound();
+        if (!await HasAccessAsync(AppPermissions.TimeSheetsEdit, Employee.DepartmentId)) return Forbid();
         if (!WorkflowService.CanMasterEdit(Day.Status) && !(_currentUser.IsInRole(AppRoles.Admin) || _currentUser.IsInRole(AppRoles.ProductionHead)))
             return Forbid();
 
@@ -155,6 +161,7 @@ public class DayModel : PageModel
             .Include(e => e.Department)
             .FirstOrDefaultAsync(e => e.Id == employeeId);
         if (Employee is null) return false;
+        if (!await HasAccessAsync(AppPermissions.TimeSheetsView, Employee.DepartmentId)) return false;
 
         // Мастер может работать только со своим участком.
         if (IsSectionMaster)
@@ -194,5 +201,12 @@ public class DayModel : PageModel
         Boats = await _db.Boats.Where(b => b.IsActive).OrderBy(b => b.Number).ToListAsync();
         WorkTypes = await _db.WorkTypes.Where(w => w.IsActive).OrderBy(w => w.Name).ToListAsync();
         return true;
+    }
+
+    private async Task<bool> HasAccessAsync(string permission, int departmentId)
+    {
+        if (_access is null) return true;
+        if (_currentUser.UserId is not { } userId) return false;
+        return await _access.HasAccessAsync(userId, permission, departmentId: departmentId);
     }
 }

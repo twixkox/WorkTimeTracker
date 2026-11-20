@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using WorkTimeTracker.Data;
 using WorkTimeTracker.Models;
+using WorkTimeTracker.Security;
 using WorkTimeTracker.Services;
 
 namespace WorkTimeTracker.Pages.Engineering;
@@ -17,14 +18,19 @@ public class IndexModel : PageModel
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly CurrentUserService _currentUser;
     private readonly EngineeringTaskService _tasks;
+    private readonly SavedFilterService? _savedFilters;
+    private readonly IAccessService? _access;
 
     public IndexModel(ApplicationDbContext db, UserManager<ApplicationUser> userManager,
-        CurrentUserService currentUser, EngineeringTaskService tasks)
+        CurrentUserService currentUser, EngineeringTaskService tasks, SavedFilterService? savedFilters = null,
+        IAccessService? access = null)
     {
         _db = db;
         _userManager = userManager;
         _currentUser = currentUser;
         _tasks = tasks;
+        _savedFilters = savedFilters;
+        _access = access;
     }
 
     public List<EngineeringTask> Tasks { get; private set; } = new();
@@ -32,10 +38,9 @@ public class IndexModel : PageModel
     public string Filter { get; private set; } = "active";
     public EngineeringTaskPriority? PriorityFilter { get; private set; }
     public string? Search { get; private set; }
-    public bool CanCreate => _currentUser.IsInRole(AppRoles.ProductionHead)
-        || _currentUser.IsInRole(AppRoles.ChiefEngineer)
-        || _currentUser.IsInRole(AppRoles.Admin);
-    public bool CanEdit => _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
+    public bool FiltersRestored { get; private set; }
+    public bool CanCreate { get; private set; }
+    public bool CanEdit { get; private set; }
 
     [BindProperty]
     [StringLength(1000, ErrorMessage = "Название задачи не может быть длиннее 1000 символов.")]
@@ -52,7 +57,24 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync(string? filter, EngineeringTaskPriority? priority, string? search)
     {
+        await LoadAccessAsync();
+        var hasQuery = Request.Query.Count > 0;
+        var reset = Request.Query.ContainsKey("reset");
+        if (!hasQuery && _savedFilters is not null)
+        {
+            var saved = await _savedFilters.GetAsync(SavedFilterService.EngineeringPage);
+            FiltersRestored = saved.Count > 0;
+            filter = saved.GetValueOrDefault("filter");
+            search = saved.GetValueOrDefault("search");
+            priority = SavedPriority(saved.GetValueOrDefault("priority"));
+        }
+
         SetFilters(filter, priority, search);
+        if (reset && _savedFilters is not null)
+            await _savedFilters.ResetAsync(SavedFilterService.EngineeringPage);
+        else if (hasQuery)
+            await SaveFiltersAsync();
+
         if (CanCreate) await LoadBoatsAsync();
         await LoadTasksAsync();
     }
@@ -60,6 +82,7 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCreateAsync(string? filter, EngineeringTaskPriority? priorityFilter,
         string? search, CancellationToken cancellationToken = default)
     {
+        await LoadAccessAsync();
         if (!CanCreate) return Forbid();
         SetFilters(filter, priorityFilter, search);
         if (string.IsNullOrWhiteSpace(Title))
@@ -148,9 +171,25 @@ public class IndexModel : PageModel
     private void SetFilters(string? filter, EngineeringTaskPriority? priority, string? search)
     {
         Filter = filter is "completed" or "all" or "overdue" ? filter : "active";
-        PriorityFilter = priority;
+        PriorityFilter = priority is { } value && Enum.IsDefined(value) ? value : null;
         Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
     }
+
+    private Task SaveFiltersAsync()
+    {
+        if (_savedFilters is null) return Task.CompletedTask;
+        return _savedFilters.SaveAsync(SavedFilterService.EngineeringPage, new Dictionary<string, string?>
+        {
+            ["filter"] = Filter,
+            ["priority"] = PriorityFilter?.ToString("D"),
+            ["search"] = Search,
+        });
+    }
+
+    private static EngineeringTaskPriority? SavedPriority(string? value)
+        => Enum.TryParse<EngineeringTaskPriority>(value, out var priority) && Enum.IsDefined(priority)
+            ? priority
+            : null;
 
     private async Task LoadBoatsAsync()
     {
@@ -200,5 +239,18 @@ public class IndexModel : PageModel
             .ThenBy(t => t.Deadline)
             .ThenByDescending(t => t.CreatedAt)
             .ToListAsync();
+    }
+
+    private async Task LoadAccessAsync()
+    {
+        if (_access is not null && _currentUser.UserId is { } userId)
+        {
+            CanCreate = await _access.HasPermissionAsync(userId, AppPermissions.EngineeringCreate);
+            CanEdit = await _access.HasPermissionAsync(userId, AppPermissions.EngineeringEdit);
+            return;
+        }
+        CanCreate = _currentUser.IsInRole(AppRoles.ProductionHead)
+            || _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
+        CanEdit = _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
     }
 }

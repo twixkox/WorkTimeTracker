@@ -3,11 +3,27 @@
 @{
     ViewData["Title"] = "Отчёты в Excel";
     var now = DateTime.Today;
-    var monthStart = new DateOnly(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
-    var monthEnd = new DateOnly(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month)).ToString("yyyy-MM-dd");
 }
 
 <h4 class="mb-3">Отчёты в Excel</h4>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="small text-muted">Быстрый период:</span>
+    <a asp-page="./Reports" asp-route-from="@Model.Today.ToString("yyyy-MM-dd")" asp-route-to="@Model.Today.ToString("yyyy-MM-dd")"
+       asp-route-employeeId="@Model.EmployeeId" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-departmentId="@Model.DepartmentId"
+       class="btn btn-sm btn-outline-primary rounded-pill">Сегодня</a>
+    <a asp-page="./Reports" asp-route-from="@Model.WeekFrom.ToString("yyyy-MM-dd")" asp-route-to="@Model.WeekTo.ToString("yyyy-MM-dd")"
+       asp-route-employeeId="@Model.EmployeeId" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-departmentId="@Model.DepartmentId"
+       class="btn btn-sm btn-outline-primary rounded-pill">Неделя</a>
+    <a asp-page="./Reports" asp-route-from="@Model.MonthFrom.ToString("yyyy-MM-dd")" asp-route-to="@Model.MonthTo.ToString("yyyy-MM-dd")"
+       asp-route-employeeId="@Model.EmployeeId" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-departmentId="@Model.DepartmentId"
+       class="btn btn-sm btn-outline-primary rounded-pill">Месяц</a>
+    <a asp-page="./Reports" asp-route-reset="1" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+    @if (Model.FiltersRestored)
+    {
+        <span class="badge text-bg-light border rounded-pill"><i class="bi bi-bookmark-check"></i> Сохранённые фильтры</span>
+    }
+</div>
 
 <div class="row g-3">
     <div class="col-md-6">
@@ -20,9 +36,13 @@
                     </div>
                     <div class="col-6">
                         <select name="year" class="form-select">
+                            @if (Model.Year > now.Year || Model.Year < now.Year - 3)
+                            {
+                                <option value="@Model.Year" selected>@Model.Year</option>
+                            }
                             @for (var y = now.Year; y >= now.Year - 3; y--)
                             {
-                                <option value="@y" selected="@(y == now.Year)">@y</option>
+                                <option value="@y" selected="@(y == Model.Year)">@y</option>
                             }
                         </select>
                     </div>
@@ -30,7 +50,7 @@
                         <select name="month" class="form-select">
                             @for (var m = 1; m <= 12; m++)
                             {
-                                <option value="@m" selected="@(m == now.Month)">@System.Globalization.CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetMonthName(m)</option>
+                                <option value="@m" selected="@(m == Model.Month)">@System.Globalization.CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetMonthName(m)</option>
                             }
                         </select>
                     </div>
@@ -48,11 +68,11 @@
                 <form method="get" asp-page-handler="Boats" class="row g-2">
                     <div class="col-6">
                         <label class="form-label small mb-0">С</label>
-                        <input type="date" name="from" value="@monthStart" class="form-control" />
+                        <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
                     </div>
                     <div class="col-6">
                         <label class="form-label small mb-0">По</label>
-                        <input type="date" name="to" value="@monthEnd" class="form-control" />
+                        <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" />
                     </div>
                     <div class="col-12">
                         <select name="departmentId" class="form-select" asp-items="Model.Departments">
@@ -73,11 +93,11 @@
                 <form method="get" asp-page-handler="Load" class="row g-2">
                     <div class="col-6">
                         <label class="form-label small mb-0">С</label>
-                        <input type="date" name="from" value="@monthStart" class="form-control" />
+                        <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
                     </div>
                     <div class="col-6">
                         <label class="form-label small mb-0">По</label>
-                        <input type="date" name="to" value="@monthEnd" class="form-control" />
+                        <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" />
                     </div>
                     <div class="col-12">
                         <button class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Скачать</button>

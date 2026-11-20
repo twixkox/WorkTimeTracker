@@ -6,10 +6,18 @@
 
 <h4 class="mb-3">Журнал аудита</h4>
 
-<form method="get" class="d-flex gap-2 mb-3">
+<form method="get" class="d-flex flex-wrap align-items-center gap-2 mb-3">
     <input name="user" value="@Model.FilterUser" class="form-control form-control-sm" style="max-width:14rem;" placeholder="Пользователь" />
     <input name="entity" value="@Model.FilterEntity" class="form-control form-control-sm" style="max-width:14rem;" placeholder="Сущность (WorkDay, Boat...)" />
     <button class="btn btn-sm btn-primary">Фильтр</button>
+    @if (Model.FiltersRestored || Model.FilterUser is not null || Model.FilterEntity is not null)
+    {
+        <a asp-page="./Audit" asp-route-reset="1" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+    }
+    @if (Model.FiltersRestored)
+    {
+        <span class="badge text-bg-light border rounded-pill"><i class="bi bi-bookmark-check"></i> Сохранённые фильтры</span>
+    }
 </form>
 
 <div class="card">
@@ -42,7 +50,7 @@
             @for (var i = 1; i <= Model.TotalPages; i++)
             {
                 <li class="page-item @(i == Model.Page ? "active" : "")">
-                    <a class="page-link" href="?p=@i&user=@Model.FilterUser&entity=@Model.FilterEntity">@i</a>
+                    <a class="page-link" asp-page="./Audit" asp-route-p="@i" asp-route-user="@Model.FilterUser" asp-route-entity="@Model.FilterEntity">@i</a>
                 </li>
             }
         </ul>

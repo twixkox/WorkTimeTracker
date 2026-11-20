@@ -1,0 +1,121 @@
+@page
+@model WorkTimeTracker.Pages.Admin.AccessModel
+@using WorkTimeTracker.Models
+@{
+    ViewData["Title"] = "Разрешения и области доступа";
+}
+
+<div class="page-heading">
+    <div>
+        <div class="page-eyebrow">RBAC</div>
+        <h4 class="mb-1">Разрешения и области доступа</h4>
+        <div class="text-muted small">Роли — шаблоны разрешений. Область ограничивает их своими данными, участком или всей компанией.</div>
+    </div>
+    <a href="/Admin/Users" class="btn btn-outline-secondary">Учётные записи</a>
+</div>
+
+<div class="alert alert-light border small">
+    Область <strong>Own</strong> разрешает только свои данные, <strong>Department</strong> — выбранный участок,
+    <strong>Global</strong> — всю компанию. Сроки можно использовать для временного замещения.
+</div>
+
+@foreach (var row in Model.Users)
+{
+    <div class="card mb-3">
+        <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+            <div><strong>@row.User.DisplayName</strong> <span class="text-muted fw-normal">@row.User.Email</span></div>
+            <span class="badge @(row.User.IsActive ? "text-bg-success" : "text-bg-secondary")">@(row.User.IsActive ? "Активен" : "Неактивен")</span>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="SaveRoles" class="mb-3">
+                <input type="hidden" name="userId" value="@row.User.Id" />
+                <div class="row g-2 align-items-end">
+                    <div class="col-lg-10">
+                        <label class="form-label">Роли пользователя</label>
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach (var role in AppRoles.All)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles" value="@role" id="role-@row.User.Id-@role" checked="@row.Roles.Contains(role)" />
+                                    <label class="form-check-label" for="role-@row.User.Id-@role">@RoleName.ToRussian(role)</label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-lg-2 d-grid"><button class="btn btn-primary btn-sm">Сохранить роли</button></div>
+                </div>
+            </form>
+
+            <div class="mb-3">
+                <div class="text-muted small mb-1">Действующие разрешения</div>
+                @if (row.Permissions.Count == 0)
+                {
+                    <span class="text-muted small">Нет активных разрешений</span>
+                }
+                else
+                {
+                    @foreach (var permission in row.Permissions)
+                    {
+                        <span class="badge text-bg-light border me-1 mb-1"><code>@permission</code></span>
+                    }
+                }
+            </div>
+
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Роль</th><th>Область</th><th>Подразделение</th><th>Срок</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var scope in row.Scopes)
+                    {
+                        <tr>
+                            <td>@(scope.Role?.Name is null ? scope.RoleId : RoleName.ToRussian(scope.Role.Name))</td>
+                            <td>@scope.Scope</td>
+                            <td>@(scope.Department?.Name ?? "—")</td>
+                            <td class="small">@(scope.ValidFrom?.ToString("dd.MM.yyyy HH:mm") ?? "—") — @(scope.ValidTo?.ToString("dd.MM.yyyy HH:mm") ?? "—")</td>
+                            <td class="text-end">
+                                <form method="post" asp-page-handler="DeleteScope">
+                                    <input type="hidden" name="id" value="@scope.Id" />
+                                    <button class="btn btn-sm btn-outline-danger" title="Удалить область"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (row.Scopes.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-muted">Явные области не заданы — используется стандартная область назначенной роли.</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+
+            <form method="post" asp-page-handler="AddScope" class="row g-2 align-items-end border-top pt-3">
+                <input type="hidden" asp-for="ScopeUserId" value="@row.User.Id" />
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Роль</label>
+                    <select asp-for="ScopeRole" class="form-select form-select-sm" required>
+                        <option value="">Выберите</option>
+                        @foreach (var role in row.Roles) { <option value="@role">@RoleName.ToRussian(role)</option> }
+                    </select>
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Область</label>
+                    <select asp-for="Scope" class="form-select form-select-sm">
+                        <option value="@AccessScope.Own">Own — свои данные</option>
+                        <option value="@AccessScope.Department">Department — участок</option>
+                        <option value="@AccessScope.Global">Global — вся компания</option>
+                    </select>
+                </div>
+                <div class="col-md-6 col-xl-2">
+                    <label class="form-label">Подразделение</label>
+                    <select asp-for="DepartmentId" class="form-select form-select-sm">
+                        <option value="">Не выбрано</option>
+                        @foreach (var department in Model.Departments) { <option value="@department.Id">@department.Name</option> }
+                    </select>
+                </div>
+                <div class="col-md-6 col-xl-2"><label class="form-label">Действует с</label><input asp-for="ValidFrom" type="datetime-local" class="form-control form-control-sm" /></div>
+                <div class="col-md-6 col-xl-2"><label class="form-label">Действует до</label><input asp-for="ValidTo" type="datetime-local" class="form-control form-control-sm" /></div>
+                <div class="col-xl-2 d-grid"><button class="btn btn-outline-primary btn-sm">Добавить область</button></div>
+            </form>
+        </div>
+    </div>
+}

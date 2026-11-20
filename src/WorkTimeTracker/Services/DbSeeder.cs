@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WorkTimeTracker.Data;
@@ -5,7 +6,7 @@ using WorkTimeTracker.Models;
 
 namespace WorkTimeTracker.Services;
 
-/// <summary>Начальное заполнение БД: роли, админ, подразделения, сотрудники, катера, настройки.</summary>
+/// <summary>Начальное заполнение БД: роли, разрешения, админ, подразделения, сотрудники, катера, настройки.</summary>
 public static class DbSeeder
 {
     public static async Task SeedAsync(IServiceProvider services)
@@ -238,6 +239,74 @@ public static class DbSeeder
         {
             shiftStart.Value = ShiftDefaults.Start.ToString("HH:mm");
             shiftEnd.Value = ShiftDefaults.End.ToString("HH:mm");
+        }
+        await db.SaveChangesAsync();
+
+        await EnsureRoleClaimsAsync(roleManager);
+        await BackfillRoleScopesAsync(db, roleManager);
+    }
+
+    private static async Task EnsureRoleClaimsAsync(RoleManager<IdentityRole> roleManager)
+    {
+        foreach (var roleName in AppRoles.All)
+        {
+            var role = await roleManager.FindByNameAsync(roleName);
+            if (role is null) continue;
+            var existingClaims = await roleManager.GetClaimsAsync(role);
+            foreach (var permission in AppPermissions.ForRole(roleName))
+            {
+                if (existingClaims.Any(c => c.Type == AppPermissions.ClaimType && c.Value == permission)) continue;
+                var result = await roleManager.AddClaimAsync(role, new Claim(AppPermissions.ClaimType, permission));
+                if (!result.Succeeded)
+                    throw new InvalidOperationException($"Не удалось добавить разрешение {permission} роли {roleName}: " +
+                        string.Join("; ", result.Errors.Select(e => e.Description)));
+            }
+        }
+    }
+
+    private static async Task BackfillRoleScopesAsync(ApplicationDbContext db, RoleManager<IdentityRole> roleManager)
+    {
+        var userRoles = await db.UserRoles.AsNoTracking().ToListAsync();
+        if (userRoles.Count == 0) return;
+
+        var userIds = userRoles.Select(ur => ur.UserId).Distinct().ToArray();
+        var employees = await db.Employees.AsNoTracking()
+            .Where(e => e.UserId != null && userIds.Contains(e.UserId))
+            .OrderBy(e => e.Id)
+            .ToListAsync();
+        var departmentByUser = employees.GroupBy(e => e.UserId!)
+            .ToDictionary(g => g.Key, g => (int?)g.First().DepartmentId, StringComparer.Ordinal);
+        var existingScopes = await db.UserRoleScopes.AsNoTracking()
+            .Where(s => userIds.Contains(s.UserId))
+            .ToListAsync();
+
+        foreach (var userRole in userRoles)
+        {
+            if (existingScopes.Any(s => s.UserId == userRole.UserId && s.RoleId == userRole.RoleId)) continue;
+            var role = await roleManager.FindByIdAsync(userRole.RoleId);
+            if (role is null) continue;
+
+            var scope = role.Name switch
+            {
+                AppRoles.Employee => AccessScope.Own,
+                AppRoles.SectionMaster => AccessScope.Department,
+                AppRoles.ProductionHead or AppRoles.ChiefEngineer or AppRoles.Engineer or AppRoles.Admin => AccessScope.Global,
+                _ => (AccessScope?)null,
+            };
+            if (scope is null) continue;
+
+            int? departmentId = null;
+            if (scope == AccessScope.Department
+                && !departmentByUser.TryGetValue(userRole.UserId, out departmentId))
+                continue;
+
+            db.UserRoleScopes.Add(new UserRoleScope
+            {
+                UserId = userRole.UserId,
+                RoleId = userRole.RoleId,
+                Scope = scope.Value,
+                DepartmentId = departmentId,
+            });
         }
         await db.SaveChangesAsync();
     }

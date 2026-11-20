@@ -1,11 +1,24 @@
 @inject WorkTimeTracker.Services.CurrentUserService CurrentUser
 @inject WorkTimeTracker.Services.NotificationService NotificationService
+@inject WorkTimeTracker.Security.IAccessService AccessService
 @{
     var user = CurrentUser.User;
     var employee = user?.Identity?.IsAuthenticated == true ? await CurrentUser.GetEmployeeAsync() : null;
     var unread = 0;
+    var canSubmit = false;
+    var canApprove = false;
+    var canProduction = false;
+    var canEngineering = false;
+    var canAdmin = false;
     if (user?.Identity?.IsAuthenticated == true && CurrentUser.UserId is not null)
+    {
         unread = await NotificationService.GetUnreadCountAsync(CurrentUser.UserId);
+        canSubmit = await AccessService.HasPermissionAsync(CurrentUser.UserId, AppPermissions.TimeSheetsSubmit);
+        canApprove = await AccessService.HasPermissionAsync(CurrentUser.UserId, AppPermissions.TimeSheetsApprove);
+        canProduction = await AccessService.HasPermissionAsync(CurrentUser.UserId, AppPermissions.ProductionView);
+        canEngineering = await AccessService.HasPermissionAsync(CurrentUser.UserId, AppPermissions.EngineeringView);
+        canAdmin = await AccessService.HasPermissionAsync(CurrentUser.UserId, AppPermissions.AdministrationAccess);
+    }
     string? userRole = user switch
     {
         null => null,
@@ -76,7 +89,12 @@
                     @if (user?.Identity?.IsAuthenticated == true)
                     {
                         <ul class="navbar-nav app-primary-nav me-auto">
-                            @if ((user.IsInRole(AppRoles.Employee) || user.IsInRole(AppRoles.SectionMaster)) && !user.IsInRole(AppRoles.Admin))
+                            <li class="nav-item app-nav-item">
+                                <a class="@NavLinkClass("/Dashboard/Index")" href="/Dashboard/Index" aria-current="@AriaCurrent("/Dashboard/Index")">
+                                    <i class="bi bi-grid app-nav-icon me-2" aria-hidden="true"></i>Мой дашборд
+                                </a>
+                            </li>
+                            @if (canSubmit)
                             {
                                 <li class="nav-item app-nav-item">
                                     <a class="@NavLinkClass("/Employee/Index")" href="/Employee/Index" aria-current="@AriaCurrent("/Employee/Index")">
@@ -89,7 +107,7 @@
                                     </a>
                                 </li>
                             }
-                            @if (user.IsInRole(AppRoles.SectionMaster))
+                            @if (canSubmit && canApprove)
                             {
                                 <li class="nav-item app-nav-item">
                                     <a class="@NavLinkClass("/Master/Index")" href="/Master/Index" aria-current="@AriaCurrent("/Master/Index")">
@@ -102,7 +120,7 @@
                                     </a>
                                 </li>
                             }
-                            @if (user.IsInRole(AppRoles.ProductionHead) || user.IsInRole(AppRoles.Admin))
+                            @if (canProduction)
                             {
                                 <li class="nav-item app-nav-item">
                                     <a class="@NavLinkClass("/Production/Index")" href="/Production/Index" aria-current="@AriaCurrent("/Production/Index")">
@@ -110,7 +128,7 @@
                                     </a>
                                 </li>
                             }
-                            @if (user.IsInRole(AppRoles.ProductionHead))
+                            @if (canProduction && !canAdmin)
                             {
                                 <li class="nav-item app-nav-item">
                                     <a class="@NavLinkClass("/Production/Dashboard")" href="/Production/Dashboard" aria-current="@AriaCurrent("/Production/Dashboard")">
@@ -118,7 +136,7 @@
                                     </a>
                                 </li>
                             }
-                            @if (user.IsInRole(AppRoles.ChiefEngineer) || user.IsInRole(AppRoles.Engineer) || user.IsInRole(AppRoles.ProductionHead) || user.IsInRole(AppRoles.Admin))
+                            @if (canEngineering)
                             {
                                 <li class="nav-item app-nav-item">
                                     <a class="@NavLinkClass("/Engineering/Index")" href="/Engineering/Index" aria-current="@AriaCurrent("/Engineering/Index")">
@@ -126,7 +144,7 @@
                                     </a>
                                 </li>
                             }
-                            @if (user.IsInRole(AppRoles.Admin))
+                            @if (canAdmin)
                             {
                                 <li class="nav-item app-nav-item">
                                     <a class="@NavLinkClass("/Admin/Index")" href="/Admin/Index" aria-current="@AriaCurrent("/Admin/Index")">
@@ -147,6 +165,7 @@
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end app-dropdown-menu" aria-label="Действия пользователя">
                                     <li><a class="dropdown-item" href="/Identity/Account/Manage"><i class="bi bi-key me-2" aria-hidden="true"></i>Смена пароля</a></li>
+                                    <li><a class="dropdown-item" href="/Notifications/Settings"><i class="bi bi-bell me-2" aria-hidden="true"></i>Настройки уведомлений</a></li>
                                     <li><hr class="dropdown-divider" /></li>
                                     <li>
                                         <form method="post" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="/Identity/Account/Login" class="app-logout-form px-3 py-1">

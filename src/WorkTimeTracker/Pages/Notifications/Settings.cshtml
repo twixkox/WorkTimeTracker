@@ -1,0 +1,76 @@
+@page
+@model WorkTimeTracker.Pages.Notifications.SettingsModel
+@{
+    ViewData["Title"] = "Настройки уведомлений";
+}
+
+<div class="page-heading">
+    <div>
+        <div class="page-eyebrow">Центр уведомлений</div>
+        <h4 class="mb-0">Настройки уведомлений</h4>
+    </div>
+    <a class="btn btn-outline-secondary" asp-page="./Index"><i class="bi bi-arrow-left"></i> К уведомлениям</a>
+</div>
+
+<div class="card" style="max-width: 46rem;">
+    <div class="card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <h6>Уведомления внутри сайта</h6>
+            <div class="form-check">
+                <input asp-for="Preferences.InAppTimesheet" class="form-check-input" />
+                <label asp-for="Preferences.InAppTimesheet" class="form-check-label">Табель</label>
+            </div>
+            <div class="form-check">
+                <input asp-for="Preferences.InAppEngineering" class="form-check-input" />
+                <label asp-for="Preferences.InAppEngineering" class="form-check-label">Инженерные задачи</label>
+            </div>
+            <div class="form-check mb-3">
+                <input asp-for="Preferences.InAppSystem" class="form-check-input" />
+                <label asp-for="Preferences.InAppSystem" class="form-check-label">Системные уведомления</label>
+            </div>
+
+            <h6>Telegram</h6>
+            <div class="form-check mb-2">
+                <input asp-for="Preferences.TelegramEnabled" class="form-check-input" />
+                <label asp-for="Preferences.TelegramEnabled" class="form-check-label">Отправлять уведомления в Telegram</label>
+            </div>
+            <div class="ms-3 mb-3">
+                <div class="form-check">
+                    <input asp-for="Preferences.TelegramTimesheet" class="form-check-input" />
+                    <label asp-for="Preferences.TelegramTimesheet" class="form-check-label">Табель</label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Preferences.TelegramEngineering" class="form-check-input" />
+                    <label asp-for="Preferences.TelegramEngineering" class="form-check-label">Инженерные задачи</label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Preferences.TelegramSystem" class="form-check-input" />
+                    <label asp-for="Preferences.TelegramSystem" class="form-check-label">Системные уведомления</label>
+                </div>
+            </div>
+
+            <h6>Тихие часы в Telegram</h6>
+            <div class="form-check mb-2">
+                <input asp-for="Preferences.QuietHoursEnabled" class="form-check-input" />
+                <label asp-for="Preferences.QuietHoursEnabled" class="form-check-label">Не отправлять в указанный период</label>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-sm-6">
+                    <label asp-for="Preferences.QuietHoursStart" class="form-label">Начало</label>
+                    <input asp-for="Preferences.QuietHoursStart" class="form-control" type="time" />
+                    <span asp-validation-for="Preferences.QuietHoursStart" class="text-danger"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Preferences.QuietHoursEnd" class="form-label">Окончание</label>
+                    <input asp-for="Preferences.QuietHoursEnd" class="form-control" type="time" />
+                    <span asp-validation-for="Preferences.QuietHoursEnd" class="text-danger"></span>
+                </div>
+            </div>
+            <p class="text-muted small">Период может переходить через полночь. Одинаковое начало и окончание отключает ограничение. Внутрисайтовые уведомления в тихие часы сохраняются.</p>
+
+            <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Сохранить</button>
+        </form>
+    </div>
+</div>

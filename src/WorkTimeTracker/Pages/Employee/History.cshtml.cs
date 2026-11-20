@@ -46,7 +46,6 @@ public class HistoryModel : PageModel
         if (_currentUser.UserId is not null)
         {
             Notifications = (await _notifications.GetForUserAsync(_currentUser.UserId)).ToList();
-            await _notifications.MarkAllReadAsync(_currentUser.UserId);
         }
         return Page();
     }

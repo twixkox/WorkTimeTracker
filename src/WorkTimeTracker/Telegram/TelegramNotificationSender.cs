@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Options;
 using WorkTimeTracker.Models;
+using WorkTimeTracker.Services;
 
 namespace WorkTimeTracker.Telegram;
 
@@ -8,17 +9,30 @@ public sealed class TelegramNotificationSender : ITelegramNotificationSender
 {
     private readonly ITelegramBotApi _api;
     private readonly TelegramOptions _options;
+    private readonly NotificationPreferenceService? _preferences;
+    private readonly TimeProvider _timeProvider;
 
-    public TelegramNotificationSender(ITelegramBotApi api, IOptions<TelegramOptions> options)
+    public TelegramNotificationSender(ITelegramBotApi api, IOptions<TelegramOptions> options,
+        NotificationPreferenceService? preferences = null, TimeProvider? timeProvider = null)
     {
         _api = api;
         _options = options.Value;
+        _preferences = preferences;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task SendAsync(ApplicationUser user, string title, string message, string? link,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        NotificationCategory category = NotificationCategory.System)
     {
         if (!_options.IsEnabled || !_api.IsEnabled || user.TelegramUserId is not { } telegramUserId)
+            return;
+
+        var preferences = _preferences is null
+            ? new NotificationPreferences()
+            : await _preferences.GetAsync(user.Id, cancellationToken);
+        var localTime = TimeOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
+        if (!preferences.AllowsTelegram(category, localTime))
             return;
 
         var text = $"{title}\n{message}";

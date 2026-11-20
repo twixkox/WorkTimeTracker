@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using WorkTimeTracker.Data;
 using WorkTimeTracker.Models;
+using WorkTimeTracker.Security;
 using WorkTimeTracker.Services;
 
 namespace WorkTimeTracker.Pages.Engineering;
@@ -17,20 +18,21 @@ public class EditModel : PageModel
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly CurrentUserService _currentUser;
     private readonly EngineeringTaskService _tasks;
+    private readonly IAccessService? _access;
 
     public EditModel(ApplicationDbContext db, UserManager<ApplicationUser> userManager,
-        CurrentUserService currentUser, EngineeringTaskService tasks)
+        CurrentUserService currentUser, EngineeringTaskService tasks, IAccessService? access = null)
     {
         _db = db;
         _userManager = userManager;
         _currentUser = currentUser;
         _tasks = tasks;
+        _access = access;
     }
 
     public EngineeringTask? Item { get; private set; }
     public SelectList Engineers { get; private set; } = default!;
     public SelectList Boats { get; private set; } = default!;
-    private bool CanEdit => _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
 
     [BindProperty]
     [StringLength(1000, ErrorMessage = "Название задачи не может быть длиннее 1000 символов.")]
@@ -60,7 +62,7 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        if (!CanEdit) return Forbid();
+        if (!await CanEditAsync()) return Forbid();
         Item = await _db.EngineeringTasks.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
         if (Item is null) return NotFound();
 
@@ -78,7 +80,7 @@ public class EditModel : PageModel
 
     public async Task<IActionResult> OnPostAsync(int id, CancellationToken cancellationToken = default)
     {
-        if (!CanEdit) return Forbid();
+        if (!await CanEditAsync()) return Forbid();
         Item = await _db.EngineeringTasks.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
         if (Item is null) return NotFound();
 
@@ -162,4 +164,11 @@ public class EditModel : PageModel
 
     private static string UserName(ApplicationUser user)
         => string.IsNullOrWhiteSpace(user.DisplayName) ? user.Email ?? user.Id : user.DisplayName;
+
+    private async Task<bool> CanEditAsync()
+    {
+        if (_access is not null && _currentUser.UserId is { } userId)
+            return await _access.HasPermissionAsync(userId, AppPermissions.EngineeringEdit);
+        return _currentUser.IsInRole(AppRoles.ChiefEngineer) || _currentUser.IsInRole(AppRoles.Admin);
+    }
 }

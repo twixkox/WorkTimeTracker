@@ -1,0 +1,393 @@
+@page
+@model WorkTimeTracker.Pages.Dashboard.IndexModel
+@using WorkTimeTracker.Models
+@using WorkTimeTracker.Services
+@{
+    ViewData["Title"] = "Мой дашборд";
+    var dashboard = Model.Dashboard;
+
+    string WorkDayUrl(DashboardWorkDayItem day)
+        => $"/Master/Day?employeeId={day.EmployeeId}&date={day.Date:yyyy-MM-dd}";
+
+    string TaskStatus(EngineeringTaskStatus status) => status switch
+    {
+        EngineeringTaskStatus.Assigned => "Назначена",
+        EngineeringTaskStatus.InProgress => "В работе",
+        _ => "Новая",
+    };
+
+    string TaskStatusClass(EngineeringTaskStatus status) => status switch
+    {
+        EngineeringTaskStatus.Assigned => "text-bg-warning",
+        EngineeringTaskStatus.InProgress => "text-bg-primary",
+        _ => "text-bg-secondary",
+    };
+
+    string PriorityText(EngineeringTaskPriority priority) => priority switch
+    {
+        EngineeringTaskPriority.Low => "Низкий",
+        EngineeringTaskPriority.High => "Высокий",
+        EngineeringTaskPriority.Urgent => "Срочный",
+        _ => "Обычный",
+    };
+
+    string PriorityClass(EngineeringTaskPriority priority) => priority switch
+    {
+        EngineeringTaskPriority.High => "text-bg-warning",
+        EngineeringTaskPriority.Urgent => "text-bg-danger",
+        _ => "text-bg-secondary",
+    };
+}
+
+<style>
+    .dashboard-card { border: 0; box-shadow: 0 0.25rem 1rem rgba(30, 45, 60, 0.08); }
+    .dashboard-kpi { height: 100%; border: 1px solid var(--bs-border-color-translucent); border-radius: var(--bs-border-radius-lg); }
+    .dashboard-kpi-value { font-size: 1.65rem; font-weight: 700; line-height: 1.2; }
+    .dashboard-kpi-label { color: var(--bs-secondary-color); font-size: 0.875rem; }
+    .dashboard-table { margin-bottom: 0; }
+    .dashboard-table td, .dashboard-table th { vertical-align: middle; }
+    .dashboard-date-list { line-height: 1.9; }
+    @@media (max-width: 575.98px) {
+        .dashboard-kpi-value { font-size: 1.4rem; }
+        .dashboard-actions .btn { flex: 1 1 auto; }
+    }
+</style>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h3 class="mb-1">Мой дашборд</h3>
+        <div class="text-muted">Актуально на @dashboard.Today.ToString("dd.MM.yyyy")</div>
+    </div>
+    <div class="dashboard-actions d-flex flex-wrap gap-2">
+        @if (dashboard.Personal?.ContinueUrl is not null)
+        {
+            <a class="btn btn-primary" href="@dashboard.Personal.ContinueUrl">
+                <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Продолжить заполнение
+            </a>
+        }
+        @if (dashboard.ShowSectionLink)
+        {
+            <a class="btn btn-outline-primary" href="/Master/Index">Табели участка</a>
+        }
+        @if (dashboard.ShowProductionLink)
+        {
+            <a class="btn btn-outline-primary" href="/Production/Index">Утверждение табелей</a>
+        }
+    </div>
+</div>
+
+@if (dashboard.ShowPersonalLink && dashboard.Personal is null)
+{
+    <div class="alert alert-warning">Учётная запись не привязана к активной карточке сотрудника. Обратитесь к администратору.</div>
+}
+
+@if (dashboard.Personal is { } personal)
+{
+    <section class="card dashboard-card mb-4" aria-labelledby="personal-title">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h5 class="mb-0" id="personal-title">Мой табель</h5>
+                <small class="text-muted">@personal.EmployeeName · @personal.DepartmentName</small>
+            </div>
+            <div class="dashboard-actions d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="/Employee/History">История</a>
+                <a class="btn btn-sm btn-outline-primary" href="/Employee/Index">Открыть месяц</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-2 row-cols-lg-4 g-3 mb-3">
+                <div class="col">
+                    <div class="dashboard-kpi p-3 border-primary-subtle">
+                        <div class="dashboard-kpi-value text-primary">@personal.MonthHours.ToString("0.##")</div>
+                        <div class="dashboard-kpi-label">часов в текущем месяце</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value">@personal.PendingDays.Count</div>
+                        <div class="dashboard-kpi-label">ожидают утверждения</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3 @(personal.RejectedDays.Count > 0 ? "border-danger-subtle" : null)">
+                        <div class="dashboard-kpi-value @(personal.RejectedDays.Count > 0 ? "text-danger" : null)">@personal.RejectedDays.Count</div>
+                        <div class="dashboard-kpi-label">отклонено</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3 @(personal.MissingDays.Count > 0 ? "border-warning-subtle" : null)">
+                        <div class="dashboard-kpi-value @(personal.MissingDays.Count > 0 ? "text-warning-emphasis" : null)">@personal.MissingDays.Count</div>
+                        <div class="dashboard-kpi-label">незаполненных рабочих дней</div>
+                    </div>
+                </div>
+            </div>
+
+            @if (personal.RejectedDays.Count > 0 || personal.MissingDays.Count > 0 || personal.PendingDays.Count > 0)
+            {
+                <div class="row g-3">
+                    @if (personal.RejectedDays.Count > 0)
+                    {
+                        <div class="col-12 col-lg-@(personal.MissingDays.Count > 0 ? "6" : "12")">
+                            <h6 class="text-danger">Нужно исправить</h6>
+                            <div class="list-group">
+                                @foreach (var day in personal.RejectedDays.Take(5))
+                                {
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between gap-2">
+                                            <strong>@day.Date.ToString("dd.MM.yyyy")</strong>
+                                            <a href="@personal.DayUrl(day.Date)" class="small">Исправить</a>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(day.RejectComment))
+                                        {
+                                            <div class="small text-muted mt-1">@day.RejectComment</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (personal.MissingDays.Count > 0)
+                    {
+                        <div class="col-12 col-lg-@(personal.RejectedDays.Count > 0 ? "6" : "12")">
+                            <h6>Нет табеля</h6>
+                            <div class="dashboard-date-list text-muted">
+                                @string.Join(" · ", personal.MissingDays.Take(10).Select(d => d.ToString("dd.MM")))
+                                @if (personal.MissingDays.Count > 10)
+                                {
+                                    <span>и ещё @(personal.MissingDays.Count - 10)</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (personal.PendingDays.Count > 0)
+                    {
+                        <div class="col-12">
+                            <div class="small text-muted">На утверждении: @string.Join(" · ", personal.PendingDays.Take(10).Select(d => d.Date.ToString("dd.MM")))</div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-success"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Табель за прошедшие рабочие дни месяца заполнен.</div>
+            }
+        </div>
+    </section>
+}
+
+@if (dashboard.ShowSectionLink && dashboard.Section is null && dashboard.Personal is not null)
+{
+    <div class="alert alert-warning">Не удалось определить участок мастера.</div>
+}
+
+@if (dashboard.Section is { } section)
+{
+    <section class="card dashboard-card mb-4" aria-labelledby="section-title">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h5 class="mb-0" id="section-title">Участок «@(section.DepartmentName)»</h5>
+                <small class="text-muted">Очередь утверждения и заполнение сегодня</small>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" href="/Master/Index?from=@dashboard.Today.ToString("yyyy-MM-dd")&to=@dashboard.Today.ToString("yyyy-MM-dd")">Открыть участок</a>
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-1 row-cols-sm-3 g-3 mb-3">
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value text-primary">@(section.Queue.Count)</div>
+                        <div class="dashboard-kpi-label">на утверждении</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value @(section.OverdueCount > 0 ? "text-danger" : null)">@(section.OverdueCount)</div>
+                        <div class="dashboard-kpi-label">ждут более 24 часов</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value @(section.MissingEmployees.Count > 0 ? "text-warning-emphasis" : null)">@(section.MissingEmployees.Count)</div>
+                        <div class="dashboard-kpi-label">без табеля сегодня</div>
+                    </div>
+                </div>
+            </div>
+
+            @if (section.Queue.Count > 0)
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table table-hover dashboard-table align-middle">
+                        <thead><tr><th>Сотрудник</th><th>Дата</th><th>Ожидание с</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var day in section.Queue.Take(10))
+                        {
+                            <tr>
+                                <td>@day.EmployeeName</td>
+                                <td>@day.Date.ToString("dd.MM.yyyy")</td>
+                                <td>@(day.SubmittedAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</td>
+                                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="@WorkDayUrl(day)">Проверить</a></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-success mb-3">Очередь утверждения пуста.</div>
+            }
+
+            @if (section.MissingEmployees.Count > 0)
+            {
+                <div class="small"><span class="fw-semibold">Без табеля сегодня:</span> @string.Join(", ", section.MissingEmployees)</div>
+            }
+        </div>
+    </section>
+}
+
+@if (dashboard.Production is { } production)
+{
+    <section class="card dashboard-card mb-4" aria-labelledby="production-title">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h5 class="mb-0" id="production-title">Производство</h5>
+                <small class="text-muted">Все участки · текущий месяц</small>
+            </div>
+            <div class="dashboard-actions d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="/Production/Dashboard">Отчёты</a>
+                <a class="btn btn-sm btn-outline-primary" href="/Production/Index">Все табели</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-2 row-cols-lg-4 g-3 mb-3">
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value text-success">@production.ApprovedDays</div>
+                        <div class="dashboard-kpi-label">утверждённых дней</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value text-primary">@production.MonthHours.ToString("0.##")</div>
+                        <div class="dashboard-kpi-label">часов за месяц</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value @(production.ProblemCount > 0 ? "text-danger" : null)">@production.ProblemCount</div>
+                        <div class="dashboard-kpi-label">требуют внимания</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value">@production.Queue.Count</div>
+                        <div class="dashboard-kpi-label">в очереди утверждения</div>
+                    </div>
+                </div>
+            </div>
+            <div class="small text-muted mb-3">
+                Отклонено: @production.RejectedDays · ожидают более 24 часов: @production.OverdueCount · без табеля сегодня: @production.MissingEmployees.Count
+            </div>
+
+            @if (production.Queue.Count > 0)
+            {
+                <h6>Очередь всех участков</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover dashboard-table">
+                        <thead><tr><th>Участок</th><th>Сотрудник</th><th>Дата</th><th>Ожидание с</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var day in production.Queue.Take(10))
+                        {
+                            <tr>
+                                <td>@day.DepartmentName</td>
+                                <td>@day.EmployeeName</td>
+                                <td>@day.Date.ToString("dd.MM.yyyy")</td>
+                                <td>@(day.SubmittedAt?.ToString("dd.MM.yyyy HH:mm") ?? "—")</td>
+                                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="@WorkDayUrl(day)">Проверить</a></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-success">Очередь утверждения пуста.</div>
+            }
+        </div>
+    </section>
+}
+
+@if (dashboard.Engineering is { } engineering)
+{
+    <section class="card dashboard-card mb-4" aria-labelledby="engineering-title">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h5 class="mb-0" id="engineering-title">@(engineering.AssignedOnly ? "Мои задачи КБ" : "Задачи КБ")</h5>
+                <small class="text-muted">@(engineering.AssignedOnly ? "Назначенные вам активные задачи" : "Активные задачи конструкторского бюро")</small>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" href="/Engineering/Index">Открыть задачи</a>
+        </div>
+        <div class="card-body">
+            <div class="row row-cols-2 row-cols-lg-@(engineering.AssignedOnly ? "3" : "4") g-3 mb-3">
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value text-primary">@engineering.ActiveCount</div>
+                        <div class="dashboard-kpi-label">активных</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value @(engineering.OverdueCount > 0 ? "text-danger" : null)">@engineering.OverdueCount</div>
+                        <div class="dashboard-kpi-label">просрочено</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="dashboard-kpi p-3">
+                        <div class="dashboard-kpi-value @(engineering.DueSoonCount > 0 ? "text-warning-emphasis" : null)">@engineering.DueSoonCount</div>
+                        <div class="dashboard-kpi-label">срок в ближайшие 2 дня</div>
+                    </div>
+                </div>
+                @if (!engineering.AssignedOnly)
+                {
+                    <div class="col">
+                        <div class="dashboard-kpi p-3">
+                            <div class="dashboard-kpi-value">@engineering.UnassignedCount</div>
+                            <div class="dashboard-kpi-label">без исполнителя</div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (engineering.Tasks.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover dashboard-table">
+                        <thead><tr><th>Задача</th><th>Статус</th><th>Приоритет</th><th>Срок</th>@if (!engineering.AssignedOnly) { <th>Исполнитель</th> }<th></th></tr></thead>
+                        <tbody>
+                        @foreach (var task in engineering.Tasks)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@task.Title</td>
+                                <td><span class="badge @TaskStatusClass(task.Status)">@TaskStatus(task.Status)</span></td>
+                                <td><span class="badge @PriorityClass(task.Priority)">@PriorityText(task.Priority)</span></td>
+                                <td class="@(task.IsOverdue ? "text-danger fw-semibold" : task.IsDueSoon ? "text-warning-emphasis fw-semibold" : null)">
+                                    @(task.Deadline?.ToString("dd.MM.yyyy") ?? "Не задан")
+                                </td>
+                                @if (!engineering.AssignedOnly)
+                                {
+                                    <td>@(task.AssigneeName ?? "Не назначен")</td>
+                                }
+                                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/Engineering/Details/@task.Id">Открыть</a></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-success">Активных задач нет.</div>
+            }
+        </div>
+    </section>
+}

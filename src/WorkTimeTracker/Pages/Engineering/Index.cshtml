@@ -83,10 +83,16 @@
             <div class="col-auto">
                 <button class="btn btn-sm btn-outline-primary">Показать</button>
             </div>
-            @if (Model.Filter != "active" || Model.PriorityFilter is not null || Model.Search is not null)
+            @if (Model.FiltersRestored || Model.Filter != "active" || Model.PriorityFilter is not null || Model.Search is not null)
             {
                 <div class="col-auto">
-                    <a asp-page="./Index" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+                    <a asp-page="./Index" asp-route-reset="1" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+                </div>
+            }
+            @if (Model.FiltersRestored)
+            {
+                <div class="col-12">
+                    <span class="badge text-bg-light border rounded-pill"><i class="bi bi-bookmark-check"></i> Сохранённые фильтры</span>
                 </div>
             }
         </form>
